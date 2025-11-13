@@ -96,6 +96,20 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
                 ),
               ),
 
+              // BPM slider
+              Slider(
+                value: bpm.toDouble(),
+                min: 60.0,
+                max: 200.0,
+                divisions: 140,
+                label: '$bpm BPM',
+                onChanged: (value) {
+                  widget.bloc.timeline.setBpm(value * 4.0); // Internal BPM is 4x
+                },
+                activeColor: Colors.amber,
+                inactiveColor: Colors.brown[700],
+              ),
+
               SizedBox(height: 16),
 
               // Control buttons
@@ -163,6 +177,46 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
                   ),
                 ],
               ),
+
+              SizedBox(height: 16),
+
+              // Visual metronome
+              $$ >> (context) {
+                final currentBeat = widget.bloc.timeline.atBeat.value;
+                final isDownbeat = currentBeat % 4 == 0;
+                final isBar = currentBeat % 16 == 0;
+
+                return AnimatedContainer(
+                  duration: Duration(milliseconds: 100),
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isBar
+                        ? Colors.red
+                        : (isDownbeat ? Colors.amber : Colors.brown[700]),
+                    boxShadow: (isBar || isDownbeat)
+                        ? [
+                            BoxShadow(
+                              color: (isBar ? Colors.red : Colors.amber).withOpacity(0.6),
+                              blurRadius: 20,
+                              spreadRadius: 5,
+                            )
+                          ]
+                        : null,
+                  ),
+                  child: Center(
+                    child: Text(
+                      '${(currentBeat % 4) + 1}',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                );
+              },
             ],
           ),
         ),
