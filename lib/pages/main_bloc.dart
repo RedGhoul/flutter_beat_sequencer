@@ -1,9 +1,7 @@
 import 'dart:async';
 
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:js' as js;
-
 import 'package:bird/bird.dart';
+import 'package:flutter_beat_sequencer/services/audio_service.dart';
 import 'package:quiver/async.dart';
 import 'package:flutter_beat_sequencer/pages/pattern.dart';
 
@@ -14,48 +12,54 @@ abstract class Playable {
 // ignore_for_file: close_sinks
 class PlaybackBloc extends HookBloc implements Playable {
   final Signal<bool> _metronomeStatus = HookBloc.disposeSink(Signal(false));
+  final AudioService audioService;
 
   List<TrackBloc> tracks;
   Wave<bool> metronomeStatus;
+  late TimelineBloc timeline;
 
-  PlaybackBloc() {
+  PlaybackBloc(this.audioService) {
     tracks = [
       TrackBloc(32, SoundSelector("808", () {
-        js.context["bass"].callMethod("play");
+        audioService.playSound('bass');
       })),
       TrackBloc(32, SoundSelector("Clap", () {
-        js.context["clap"].callMethod("play");
+        audioService.playSound('clap');
       })),
       TrackBloc(32, SoundSelector("Hat", () {
-        js.context["hat"].callMethod("play");
+        audioService.playSound('hat');
       })),
       TrackBloc(32, SoundSelector("Open Hat", () {
-        js.context["open_hat"].callMethod("play");
+        audioService.playSound('open_hat');
       })),
       TrackBloc(32, SoundSelector("Kick 1", () {
-        js.context["kick"].callMethod("play");
+        audioService.playSound('kick_1');
       })),
       TrackBloc(32, SoundSelector("Kick 2", () {
-        js.context["kick2"].callMethod("play");
+        audioService.playSound('kick_2');
       })),
       TrackBloc(32, SoundSelector("Snare 1", () {
-        js.context["snare_1"].callMethod("play");
+        audioService.playSound('snare_1');
       })),
       TrackBloc(32, SoundSelector("Snare 2", () {
-        js.context["snare_2"].callMethod("play");
+        audioService.playSound('snare_2');
       })),
     ];
     tracks.map((a) => a.dispose).forEach(disposeLater);
     metronomeStatus = _metronomeStatus.wave;
+
+    // Initialize timeline
+    timeline = TimelineBloc(playAtBeat);
+    disposeLater(timeline.dispose);
   }
 
   @override
   void playAtBeat(TimelineBloc bloc, int beat) {
     if (_metronomeStatus.value && beat % 4 == 0) {
       if (beat % 16 == 0) {
-        js.context.callMethod("playSound", <dynamic>["C6", "32n"]);
+        audioService.playSynth("C6", "32n");
       } else {
-        js.context.callMethod("playSound", <dynamic>["C5", "32n"]);
+        audioService.playSynth("C5", "32n");
       }
     }
     tracks.forEach((track) => track.playAtBeat(bloc, beat));
@@ -109,16 +113,24 @@ class TimelineBloc extends HookBloc {
     _isPlaying.add(!_isPlaying.value);
   }
 
-  void _increaseAtBeat() {
-    _atBeat.add(atBeat.value + 1);
-    if (_atBeat.value == 32) {
-      _atBeat.add(0);
-    }
+  void play() {
+    _isPlaying.add(true);
   }
 
   void stop() {
     _isPlaying.add(false);
     _atBeat.add(-1);
+  }
+
+  void setBpm(double newBpm) {
+    _bpm.add(newBpm);
+  }
+
+  void _increaseAtBeat() {
+    _atBeat.add(atBeat.value + 1);
+    if (_atBeat.value == 32) {
+      _atBeat.add(0);
+    }
   }
 
   void setBeat(int i) {
