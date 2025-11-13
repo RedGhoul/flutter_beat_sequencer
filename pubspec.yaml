@@ -17,6 +17,7 @@ dependencies:
     git:
       url: git://github.com/modulovalue/modulovalue_project_widgets.git
       ref: 19d34e2be61bd27f57d4df979fcc1cb83779ee38
+  just_audio: ^0.9.36
 
 dev_dependencies:
   flutter_test:
