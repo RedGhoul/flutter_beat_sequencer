@@ -484,7 +484,7 @@ class MobileTrackRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const buttonSize = 48.0; // Material Design minimum touch target
+    const buttonSize = 48.0; // Recommended minimum touch target
     const spacing = 4.0;
 
     return Row(
@@ -660,11 +660,11 @@ class TrackStep extends StatelessWidget {
 ```
 
 **Why:**
-- 48px touch targets (Material Design compliant)
+- 48px touch targets (optimal for mobile)
 - Haptic feedback on every interaction
 - Visual glow on enabled beats
 - Mobile-friendly bottom sheet for patterns
-- Clean, modern Material Design aesthetics
+- Clean, modern aesthetics
 
 ---
 
@@ -1305,7 +1305,7 @@ void main() async {
 - Touch-optimized (48px buttons)
 - Native audio playback (just_audio)
 - Haptic feedback on all interactions
-- Modern Material Design aesthetics
+- Modern aesthetics
 - Portrait-optimized layout
 
 **Key Features:**
