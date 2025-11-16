@@ -9,6 +9,7 @@ class MobileTrackRow extends StatelessWidget {
   final int currentBeat;
   final int startBeat;
   final int endBeat;
+  final VoidCallback? onDelete;
 
   const MobileTrackRow({
     Key? key,
@@ -16,6 +17,7 @@ class MobileTrackRow extends StatelessWidget {
     required this.currentBeat,
     required this.startBeat,
     required this.endBeat,
+    this.onDelete,
   }) : super(key: key);
 
   @override
@@ -92,6 +94,29 @@ class MobileTrackRow extends StatelessWidget {
                 ),
               ),
               child: Icon(Icons.more_horiz, size: 20, color: Colors.white),
+            ),
+          ),
+        ],
+
+        // Delete button (only show on first segment if deletable)
+        if (startBeat == 0 && onDelete != null) ...[
+          SizedBox(width: spacing + 2),
+          SizedBox(
+            width: 36,
+            height: buttonSize,
+            child: ElevatedButton(
+              onPressed: () {
+                HapticFeedback.mediumImpact();
+                onDelete!();
+              },
+              style: ElevatedButton.styleFrom(
+                padding: EdgeInsets.zero,
+                backgroundColor: Colors.red[900],
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
+                ),
+              ),
+              child: Icon(Icons.delete_outline, size: 18, color: Colors.white),
             ),
           ),
         ],

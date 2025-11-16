@@ -13,9 +13,10 @@ abstract class Playable {
 class PlaybackBloc extends HookBloc implements Playable {
   final Signal<bool> _metronomeStatus = HookBloc.disposeSink(Signal(false));
   final Signal<int> _totalBeats = HookBloc.disposeSink(Signal(32));
+  final Signal<List<TrackBloc>> _tracks = HookBloc.disposeSink(Signal([]));
   final AudioService audioService;
 
-  List<TrackBloc> tracks;
+  Wave<List<TrackBloc>> tracks;
   Wave<bool> metronomeStatus;
   Wave<int> totalBeats;
   late TimelineBloc timeline;
@@ -23,7 +24,7 @@ class PlaybackBloc extends HookBloc implements Playable {
   PlaybackBloc(this.audioService) {
     final initialBeats = _totalBeats.value;
 
-    tracks = [
+    final initialTracks = [
       TrackBloc(initialBeats, SoundSelector("808", () {
         audioService.playSound('bass');
       })),
@@ -49,7 +50,11 @@ class PlaybackBloc extends HookBloc implements Playable {
         audioService.playSound('snare_2');
       })),
     ];
-    tracks.map((a) => a.dispose).forEach(disposeLater);
+
+    _tracks.add(initialTracks);
+    initialTracks.map((a) => a.dispose).forEach(disposeLater);
+
+    tracks = _tracks.wave;
     metronomeStatus = _metronomeStatus.wave;
     totalBeats = _totalBeats.wave;
 
@@ -67,7 +72,7 @@ class PlaybackBloc extends HookBloc implements Playable {
         audioService.playSynth("C5", "32n");
       }
     }
-    tracks.forEach((track) => track.playAtBeat(bloc, beat));
+    _tracks.value.forEach((track) => track.playAtBeat(bloc, beat));
   }
 
   void toggleMetronome() {
@@ -79,7 +84,7 @@ class PlaybackBloc extends HookBloc implements Playable {
     _totalBeats.add(newTotal);
 
     // Extend all tracks
-    for (final track in tracks) {
+    for (final track in _tracks.value) {
       track.extendPattern(newTotal);
     }
   }
@@ -90,7 +95,7 @@ class PlaybackBloc extends HookBloc implements Playable {
       _totalBeats.add(newTotal);
 
       // Truncate all tracks
-      for (final track in tracks) {
+      for (final track in _tracks.value) {
         track.truncatePattern(newTotal);
       }
 
@@ -98,6 +103,30 @@ class PlaybackBloc extends HookBloc implements Playable {
       if (timeline.atBeat.value >= newTotal) {
         timeline.setBeat(0);
       }
+    }
+  }
+
+  void addTrack(String soundKey, String displayName) {
+    final newTrack = TrackBloc(
+      _totalBeats.value,
+      SoundSelector(displayName, () {
+        audioService.playSound(soundKey);
+      }),
+    );
+
+    disposeLater(newTrack.dispose);
+    final updatedTracks = List<TrackBloc>.from(_tracks.value)..add(newTrack);
+    _tracks.add(updatedTracks);
+  }
+
+  void removeTrack(int index) {
+    if (_tracks.value.length > 1 && index >= 0 && index < _tracks.value.length) {
+      final trackToRemove = _tracks.value[index];
+      final updatedTracks = List<TrackBloc>.from(_tracks.value)..removeAt(index);
+      _tracks.add(updatedTracks);
+
+      // Dispose the removed track
+      trackToRemove.dispose();
     }
   }
 

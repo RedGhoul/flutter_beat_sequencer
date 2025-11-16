@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:bird_flutter/bird_flutter.dart';
 import 'main_bloc.dart';
 import '../widgets/mobile_track_row.dart';
+import '../models/sound_library.dart';
 
 class MobileSequencerLayout extends StatefulWidget {
   final PlaybackBloc bloc;
@@ -31,6 +33,13 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
 
       return Scaffold(
       backgroundColor: Colors.grey[900],
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showAddTrackDialog(context),
+        backgroundColor: Colors.cyan,
+        foregroundColor: Colors.black,
+        child: Icon(Icons.add),
+        tooltip: 'Add Track',
+      ),
       body: Row(
         children: [
           // Left sidebar - Control panel
@@ -435,13 +444,14 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
   Widget _buildTrackGridContent(int startBeat, int endBeat) {
     return $$ >> (context) {
       final currentBeat = widget.bloc.timeline.atBeat.value;
+      final tracksList = widget.bloc.tracks.value;
 
       return ListView.separated(
         padding: EdgeInsets.all(8),
-        itemCount: widget.bloc.tracks.length,
+        itemCount: tracksList.length,
         separatorBuilder: (context, index) => SizedBox(height: 4),
         itemBuilder: (context, trackIndex) {
-          final track = widget.bloc.tracks[trackIndex];
+          final track = tracksList[trackIndex];
 
           return Card(
             color: Colors.grey[850],
@@ -457,11 +467,100 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
                 currentBeat: currentBeat,
                 startBeat: startBeat,
                 endBeat: endBeat,
+                onDelete: tracksList.length > 1
+                    ? () => widget.bloc.removeTrack(trackIndex)
+                    : null,
               ),
             ),
           );
         },
       );
     };
+  }
+
+  void _showAddTrackDialog(BuildContext context) {
+    HapticFeedback.mediumImpact();
+    final soundsByCategory = SoundLibrary.getSoundsByCategory();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.grey[850],
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        minChildSize: 0.5,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (context, scrollController) {
+          return Container(
+            padding: EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[700],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Text(
+                  'Add Track',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                SizedBox(height: 16),
+                Expanded(
+                  child: ListView(
+                    controller: scrollController,
+                    children: soundsByCategory.entries.map((entry) {
+                      final category = entry.key;
+                      final sounds = entry.value;
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                            child: Text(
+                              category,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.cyan,
+                              ),
+                            ),
+                          ),
+                          ...sounds.map((sound) => ListTile(
+                            leading: Icon(Icons.music_note, color: Colors.cyan),
+                            title: Text(
+                              sound.displayName,
+                              style: TextStyle(color: Colors.white),
+                            ),
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              widget.bloc.addTrack(sound.key, sound.displayName);
+                              Navigator.pop(context);
+                            },
+                          )),
+                          Divider(color: Colors.grey[800]),
+                        ],
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
   }
 }
