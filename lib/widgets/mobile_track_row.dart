@@ -20,30 +20,30 @@ class MobileTrackRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const buttonSize = 48.0; // Recommended minimum touch target
-    const spacing = 4.0;
+    const buttonSize = 32.0; // Smaller for landscape
+    const spacing = 2.0;
 
     return Row(
       children: [
         // Track label (only show on first segment)
         if (startBeat == 0) ...[
           SizedBox(
-            width: 60,
+            width: 50,
             child: GestureDetector(
               onTap: () {
                 HapticFeedback.lightImpact();
                 track.sound.play();
               },
               child: Container(
-                padding: EdgeInsets.all(8),
+                padding: EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: Colors.brown[700],
-                  borderRadius: BorderRadius.circular(8),
+                  color: Colors.grey[800],
+                  borderRadius: BorderRadius.circular(6),
                 ),
                 child: Center(
                   child: Text(
                     track.sound.name,
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
                     overflow: TextOverflow.ellipsis,
                     maxLines: 2,
                     textAlign: TextAlign.center,
@@ -52,9 +52,9 @@ class MobileTrackRow extends StatelessWidget {
               ),
             ),
           ),
-          SizedBox(width: spacing),
+          SizedBox(width: spacing + 2),
         ] else ...[
-          SizedBox(width: 60 + spacing),
+          SizedBox(width: 52 + spacing),
         ],
 
         // Beat steps for this segment
@@ -78,20 +78,20 @@ class MobileTrackRow extends StatelessWidget {
 
         // Pattern button (only show on first segment)
         if (startBeat == 0) ...[
-          SizedBox(width: spacing),
+          SizedBox(width: spacing + 2),
           SizedBox(
-            width: 50,
+            width: 40,
             height: buttonSize,
             child: ElevatedButton(
               onPressed: () => _showPatternMenu(context, track),
               style: ElevatedButton.styleFrom(
                 padding: EdgeInsets.zero,
-                backgroundColor: Colors.brown[700],
+                backgroundColor: Colors.grey[800],
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(6),
                 ),
               ),
-              child: Icon(Icons.more_horiz, size: 24, color: Colors.white),
+              child: Icon(Icons.more_horiz, size: 20, color: Colors.white),
             ),
           ),
         ],
@@ -103,7 +103,7 @@ class MobileTrackRow extends StatelessWidget {
     HapticFeedback.mediumImpact();
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.brown[800],
+      backgroundColor: Colors.grey[850],
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -117,7 +117,7 @@ class MobileTrackRow extends StatelessWidget {
               height: 4,
               margin: EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
-                color: Colors.brown[600],
+                color: Colors.grey[700],
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -132,7 +132,7 @@ class MobileTrackRow extends StatelessWidget {
             SizedBox(height: 16),
             ...allPatterns().map((pattern) => ListTile(
               title: Text(pattern.name, style: TextStyle(color: Colors.white)),
-              leading: Icon(Icons.graphic_eq, color: Colors.amber),
+              leading: Icon(Icons.graphic_eq, color: Colors.cyan),
               onTap: () {
                 HapticFeedback.selectionClick();
                 track.setPattern(pattern);
@@ -172,18 +172,18 @@ class TrackStep extends StatelessWidget {
         height: size,
         decoration: BoxDecoration(
           color: enabled
-              ? Colors.amber
-              : (active ? Colors.blue.withOpacity(0.5) : Colors.brown[800]),
+              ? Colors.cyan
+              : (active ? Colors.blue.withOpacity(0.3) : Colors.grey[800]),
           borderRadius: BorderRadius.circular(size / 2),
           border: Border.all(
             color: active ? Colors.white : Colors.transparent,
-            width: active ? 3 : 0,
+            width: active ? 2 : 0,
           ),
           boxShadow: enabled
               ? [
                   BoxShadow(
-                    color: Colors.amber.withOpacity(0.5),
-                    blurRadius: 8,
+                    color: Colors.cyan.withOpacity(0.5),
+                    blurRadius: 6,
                     spreadRadius: 1,
                   )
                 ]

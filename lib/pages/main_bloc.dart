@@ -12,44 +12,49 @@ abstract class Playable {
 // ignore_for_file: close_sinks
 class PlaybackBloc extends HookBloc implements Playable {
   final Signal<bool> _metronomeStatus = HookBloc.disposeSink(Signal(false));
+  final Signal<int> _totalBeats = HookBloc.disposeSink(Signal(32));
   final AudioService audioService;
 
   List<TrackBloc> tracks;
   Wave<bool> metronomeStatus;
+  Wave<int> totalBeats;
   late TimelineBloc timeline;
 
   PlaybackBloc(this.audioService) {
+    final initialBeats = _totalBeats.value;
+
     tracks = [
-      TrackBloc(32, SoundSelector("808", () {
+      TrackBloc(initialBeats, SoundSelector("808", () {
         audioService.playSound('bass');
       })),
-      TrackBloc(32, SoundSelector("Clap", () {
+      TrackBloc(initialBeats, SoundSelector("Clap", () {
         audioService.playSound('clap');
       })),
-      TrackBloc(32, SoundSelector("Hat", () {
+      TrackBloc(initialBeats, SoundSelector("Hat", () {
         audioService.playSound('hat');
       })),
-      TrackBloc(32, SoundSelector("Open Hat", () {
+      TrackBloc(initialBeats, SoundSelector("Open Hat", () {
         audioService.playSound('open_hat');
       })),
-      TrackBloc(32, SoundSelector("Kick 1", () {
+      TrackBloc(initialBeats, SoundSelector("Kick 1", () {
         audioService.playSound('kick_1');
       })),
-      TrackBloc(32, SoundSelector("Kick 2", () {
+      TrackBloc(initialBeats, SoundSelector("Kick 2", () {
         audioService.playSound('kick_2');
       })),
-      TrackBloc(32, SoundSelector("Snare 1", () {
+      TrackBloc(initialBeats, SoundSelector("Snare 1", () {
         audioService.playSound('snare_1');
       })),
-      TrackBloc(32, SoundSelector("Snare 2", () {
+      TrackBloc(initialBeats, SoundSelector("Snare 2", () {
         audioService.playSound('snare_2');
       })),
     ];
     tracks.map((a) => a.dispose).forEach(disposeLater);
     metronomeStatus = _metronomeStatus.wave;
+    totalBeats = _totalBeats.wave;
 
-    // Initialize timeline
-    timeline = TimelineBloc(playAtBeat);
+    // Initialize timeline with dynamic beat count
+    timeline = TimelineBloc(playAtBeat, _totalBeats);
     disposeLater(timeline.dispose);
   }
 
@@ -68,12 +73,42 @@ class PlaybackBloc extends HookBloc implements Playable {
   void toggleMetronome() {
     _metronomeStatus.add(!_metronomeStatus.value);
   }
+
+  void addMeasure() {
+    final newTotal = _totalBeats.value + 16; // Add 1 measure (16 beats)
+    _totalBeats.add(newTotal);
+
+    // Extend all tracks
+    for (final track in tracks) {
+      track.extendPattern(newTotal);
+    }
+  }
+
+  void removeMeasure() {
+    if (_totalBeats.value > 16) { // Minimum 1 measure
+      final newTotal = _totalBeats.value - 16;
+      _totalBeats.add(newTotal);
+
+      // Truncate all tracks
+      for (final track in tracks) {
+        track.truncatePattern(newTotal);
+      }
+
+      // Reset beat position if needed
+      if (timeline.atBeat.value >= newTotal) {
+        timeline.setBeat(0);
+      }
+    }
+  }
+
+  int get measures => (_totalBeats.value / 16).ceil();
 }
 
 class TimelineBloc extends HookBloc {
   final Signal<bool> _isPlaying = HookBloc.disposeSink(Signal(false));
   final Signal<double> _bpm = HookBloc.disposeSink(Signal(160.0 * 4.0));
   final Signal<int> _atBeat = HookBloc.disposeSink(Signal(-1));
+  final Signal<int> _totalBeats;
 
   Wave<bool> isPlaying;
   Wave<double> bpm;
@@ -81,7 +116,7 @@ class TimelineBloc extends HookBloc {
 
   StreamSubscription<DateTime> _metronome;
 
-  TimelineBloc(void Function(TimelineBloc, int) playAtBeat) {
+  TimelineBloc(void Function(TimelineBloc, int) playAtBeat, this._totalBeats) {
     final __isPlaying = _isPlaying.wave.distinct().subscribe((play) {
       if (_metronome != null) {
         _metronome.cancel();
@@ -128,7 +163,7 @@ class TimelineBloc extends HookBloc {
 
   void _increaseAtBeat() {
     _atBeat.add(atBeat.value + 1);
-    if (_atBeat.value == 32) {
+    if (_atBeat.value >= _totalBeats.value) {
       _atBeat.add(0);
     }
   }
@@ -178,6 +213,21 @@ class TrackBloc extends HookBloc implements Playable {
         .keys
         .map(pattern.builder)
         .toList());
+  }
+
+  void extendPattern(int newLength) {
+    final current = _isEnabled.value;
+    final extended = List<bool>.generate(
+      newLength,
+      (i) => i < current.length ? current[i] : false,
+    );
+    _isEnabled.add(extended);
+  }
+
+  void truncatePattern(int newLength) {
+    final current = _isEnabled.value;
+    final truncated = current.sublist(0, newLength);
+    _isEnabled.add(truncated);
   }
 }
 

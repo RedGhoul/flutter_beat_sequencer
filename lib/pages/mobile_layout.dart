@@ -14,7 +14,7 @@ class MobileSequencerLayout extends StatefulWidget {
 
 class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
   int _currentPage = 0;
-  final int _beatsPerPage = 8; // Show 8 beats per page
+  final int _beatsPerPage = 16; // Show 16 beats per page in landscape
   final PageController _pageController = PageController();
 
   @override
@@ -25,50 +25,69 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
 
   @override
   Widget build(BuildContext context) {
-    final totalPages = (32 / _beatsPerPage).ceil();
+    return $$ >> (context) {
+      final totalBeats = widget.bloc.totalBeats.value;
+      final totalPages = (totalBeats / _beatsPerPage).ceil();
 
-    return Scaffold(
-      backgroundColor: Colors.brown[900],
-      appBar: AppBar(
-        title: Text('Beat Sequencer', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.brown[800],
-        elevation: 0,
-      ),
-      body: Column(
+      return Scaffold(
+      backgroundColor: Colors.grey[900],
+      body: Row(
         children: [
-          // Control panel
-          _buildControlPanel(),
+          // Left sidebar - Control panel
+          Container(
+            width: 180,
+            decoration: BoxDecoration(
+              color: Colors.grey[850],
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: Offset(2, 0),
+                ),
+              ],
+            ),
+            child: _buildControlPanel(),
+          ),
 
-          SizedBox(height: 8),
-
-          // Page indicator
-          _buildPageIndicator(totalPages),
-
-          SizedBox(height: 8),
-
-          // Beat position indicator
-          _buildBeatIndicator(),
-
-          SizedBox(height: 12),
-
-          // Track grid (paginated)
+          // Main content - Track grid
           Expanded(
-            child: PageView.builder(
-              controller: _pageController,
-              onPageChanged: (page) {
-                setState(() {
-                  _currentPage = page;
-                });
-              },
-              itemCount: totalPages,
-              itemBuilder: (context, pageIndex) {
-                return _buildTrackGrid(pageIndex);
-              },
+            child: Column(
+              children: [
+                // Top bar with page indicator and beat indicator
+                Container(
+                  color: Colors.grey[850],
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: Column(
+                    children: [
+                      _buildPageIndicator(totalPages),
+                      SizedBox(height: 6),
+                      _buildBeatIndicator(),
+                    ],
+                  ),
+                ),
+
+                // Track grid (paginated)
+                Expanded(
+                  child: PageView.builder(
+                    controller: _pageController,
+                    onPageChanged: (page) {
+                      setState(() {
+                        _currentPage = page;
+                      });
+                    },
+                    itemCount: totalPages,
+                    itemBuilder: (context, pageIndex) {
+                      return _buildTrackGrid(pageIndex);
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
         ],
       ),
-    );
+      );
+    };
   }
 
   Widget _buildControlPanel() {
@@ -77,130 +96,239 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
       final metronomeOn = widget.bloc.metronomeStatus.value;
       final bpm = (widget.bloc.timeline.bpm.value / 4.0).round();
 
-      return Card(
-        color: Colors.brown[800],
-        margin: EdgeInsets.all(8),
-        elevation: 4,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Column(
-            children: [
-              // BPM display
-              Text(
-                'BPM: $bpm',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.amber,
-                ),
+      return SingleChildScrollView(
+        padding: EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // App title
+            Text(
+              'Beat\nSequencer',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                height: 1.1,
               ),
+              textAlign: TextAlign.center,
+            ),
 
-              // BPM slider
-              Slider(
-                value: bpm.toDouble(),
-                min: 60.0,
-                max: 200.0,
-                divisions: 140,
-                label: '$bpm BPM',
-                onChanged: (value) {
-                  widget.bloc.timeline.setBpm(value * 4.0); // Internal BPM is 4x
-                },
-                activeColor: Colors.amber,
-                inactiveColor: Colors.brown[700],
+            SizedBox(height: 20),
+
+            // BPM display
+            Container(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.grey[800],
+                borderRadius: BorderRadius.circular(8),
               ),
-
-              SizedBox(height: 16),
-
-              // Control buttons
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              child: Column(
                 children: [
-                  // Play/Stop button
-                  Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 4),
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          if (isPlaying) {
-                            widget.bloc.timeline.stop();
-                          } else {
-                            widget.bloc.timeline.play();
-                          }
-                        },
-                        icon: Icon(
-                          isPlaying ? Icons.stop : Icons.play_arrow,
-                          size: 28,
-                        ),
-                        label: Text(
-                          isPlaying ? 'Stop' : 'Play',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          backgroundColor: isPlaying ? Colors.red : Colors.green,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
+                  Text(
+                    'BPM',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[400],
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-
-                  // Metronome toggle
-                  Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 4),
-                      child: ElevatedButton.icon(
-                        onPressed: widget.bloc.toggleMetronome,
-                        icon: Icon(
-                          metronomeOn ? Icons.volume_up : Icons.volume_off,
-                          size: 28,
-                        ),
-                        label: Text(
-                          'Metro',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          backgroundColor: metronomeOn
-                              ? Colors.amber
-                              : Colors.brown[700],
-                          foregroundColor: metronomeOn ? Colors.black : Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
+                  SizedBox(height: 4),
+                  Text(
+                    '$bpm',
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.cyan,
                     ),
                   ),
                 ],
               ),
+            ),
 
-              SizedBox(height: 16),
+            SizedBox(height: 12),
 
-              // Visual metronome
-              $$ >> (context) {
+            // BPM slider (vertical orientation)
+            Text(
+              'Tempo',
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.grey[400],
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            Slider(
+              value: bpm.toDouble(),
+              min: 60.0,
+              max: 200.0,
+              divisions: 140,
+              label: '$bpm',
+              onChanged: (value) {
+                widget.bloc.timeline.setBpm(value * 4.0);
+              },
+              activeColor: Colors.cyan,
+              inactiveColor: Colors.grey[700],
+            ),
+
+            SizedBox(height: 16),
+
+            // Play/Stop button
+            ElevatedButton(
+              onPressed: () {
+                if (isPlaying) {
+                  widget.bloc.timeline.stop();
+                } else {
+                  widget.bloc.timeline.play();
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                backgroundColor: isPlaying ? Colors.red[700] : Colors.green[600],
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    isPlaying ? Icons.stop : Icons.play_arrow,
+                    size: 24,
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    isPlaying ? 'Stop' : 'Play',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
+
+            SizedBox(height: 10),
+
+            // Metronome toggle
+            ElevatedButton(
+              onPressed: widget.bloc.toggleMetronome,
+              style: ElevatedButton.styleFrom(
+                padding: EdgeInsets.symmetric(vertical: 14),
+                backgroundColor: metronomeOn ? Colors.cyan : Colors.grey[800],
+                foregroundColor: metronomeOn ? Colors.black : Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    metronomeOn ? Icons.volume_up : Icons.volume_off,
+                    size: 20,
+                  ),
+                  SizedBox(width: 6),
+                  Text(
+                    'Metro',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
+
+            SizedBox(height: 20),
+
+            // Measures control
+            $$ >> (context) {
+              final measures = widget.bloc.measures;
+
+              return Container(
+                padding: EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.grey[800],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      'Measures',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey[400],
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 6),
+                    Text(
+                      '$measures',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.cyan,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: widget.bloc.removeMeasure,
+                            style: ElevatedButton.styleFrom(
+                              padding: EdgeInsets.symmetric(vertical: 8),
+                              backgroundColor: Colors.grey[700],
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                            ),
+                            child: Icon(Icons.remove, size: 18),
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: widget.bloc.addMeasure,
+                            style: ElevatedButton.styleFrom(
+                              padding: EdgeInsets.symmetric(vertical: 8),
+                              backgroundColor: Colors.cyan,
+                              foregroundColor: Colors.black,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                            ),
+                            child: Icon(Icons.add, size: 18),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
+
+            SizedBox(height: 20),
+
+            // Visual metronome
+            Center(
+              child: $$ >> (context) {
                 final currentBeat = widget.bloc.timeline.atBeat.value;
                 final isDownbeat = currentBeat % 4 == 0;
                 final isBar = currentBeat % 16 == 0;
 
                 return AnimatedContainer(
                   duration: Duration(milliseconds: 100),
-                  width: 60,
-                  height: 60,
+                  width: 50,
+                  height: 50,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: isBar
-                        ? Colors.red
-                        : (isDownbeat ? Colors.amber : Colors.brown[700]),
+                        ? Colors.red[600]
+                        : (isDownbeat ? Colors.cyan : Colors.grey[800]),
                     boxShadow: (isBar || isDownbeat)
                         ? [
                             BoxShadow(
-                              color: (isBar ? Colors.red : Colors.amber).withOpacity(0.6),
-                              blurRadius: 20,
-                              spreadRadius: 5,
+                              color: (isBar ? Colors.red : Colors.cyan)
+                                  .withOpacity(0.6),
+                              blurRadius: 15,
+                              spreadRadius: 3,
                             )
                           ]
                         : null,
@@ -209,7 +337,7 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
                     child: Text(
                       '${(currentBeat % 4) + 1}',
                       style: TextStyle(
-                        fontSize: 24,
+                        fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
@@ -217,8 +345,8 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
                   ),
                 );
               },
-            ],
-          ),
+            ),
+          ],
         ),
       );
     };
@@ -230,17 +358,17 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
       children: [
         Text(
           'Page ${_currentPage + 1}/$totalPages',
-          style: TextStyle(color: Colors.white70, fontSize: 12),
+          style: TextStyle(color: Colors.grey[400], fontSize: 11),
         ),
-        SizedBox(width: 12),
+        SizedBox(width: 10),
         ...List.generate(totalPages, (index) {
           return Container(
-            width: _currentPage == index ? 32 : 8,
-            height: 8,
-            margin: EdgeInsets.symmetric(horizontal: 4),
+            width: _currentPage == index ? 24 : 6,
+            height: 6,
+            margin: EdgeInsets.symmetric(horizontal: 3),
             decoration: BoxDecoration(
-              color: _currentPage == index ? Colors.amber : Colors.brown[700],
-              borderRadius: BorderRadius.circular(4),
+              color: _currentPage == index ? Colors.cyan : Colors.grey[700],
+              borderRadius: BorderRadius.circular(3),
             ),
           );
         }),
@@ -252,11 +380,9 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
     return $$ >> (context) {
       final currentBeat = widget.bloc.timeline.atBeat.value;
       final startBeat = _currentPage * _beatsPerPage;
-      final endBeat = startBeat + _beatsPerPage;
 
       return Container(
-        height: 24,
-        margin: EdgeInsets.symmetric(horizontal: 8),
+        height: 20,
         child: Row(
           children: List.generate(_beatsPerPage, (index) {
             final beatIndex = startBeat + index;
@@ -267,22 +393,22 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
               child: GestureDetector(
                 onTap: () => widget.bloc.timeline.setBeat(beatIndex),
                 child: Container(
-                  margin: EdgeInsets.symmetric(horizontal: 2),
+                  margin: EdgeInsets.symmetric(horizontal: 1),
                   decoration: BoxDecoration(
                     color: isActive
-                        ? Colors.amber
-                        : (isFourBeat ? Colors.brown[700] : Colors.brown[800]),
-                    borderRadius: BorderRadius.circular(4),
+                        ? Colors.cyan
+                        : (isFourBeat ? Colors.grey[700] : Colors.grey[800]),
+                    borderRadius: BorderRadius.circular(3),
                     border: isFourBeat
-                        ? Border.all(color: Colors.brown[600]!, width: 1)
+                        ? Border.all(color: Colors.grey[600]!, width: 1)
                         : null,
                   ),
                   child: Center(
                     child: Text(
                       '${beatIndex % 16 + 1}',
                       style: TextStyle(
-                        color: isActive ? Colors.black : Colors.white54,
-                        fontSize: 10,
+                        color: isActive ? Colors.black : Colors.grey[500],
+                        fontSize: 9,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -297,27 +423,35 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
   }
 
   Widget _buildTrackGrid(int pageIndex) {
-    final startBeat = pageIndex * _beatsPerPage;
-    final endBeat = (startBeat + _beatsPerPage).clamp(0, 32);
+    return $$ >> (context) {
+      final totalBeats = widget.bloc.totalBeats.value;
+      final startBeat = pageIndex * _beatsPerPage;
+      final endBeat = (startBeat + _beatsPerPage).clamp(0, totalBeats);
 
+      return _buildTrackGridContent(startBeat, endBeat);
+    };
+  }
+
+  Widget _buildTrackGridContent(int startBeat, int endBeat) {
     return $$ >> (context) {
       final currentBeat = widget.bloc.timeline.atBeat.value;
 
       return ListView.separated(
         padding: EdgeInsets.all(8),
         itemCount: widget.bloc.tracks.length,
-        separatorBuilder: (context, index) => SizedBox(height: 8),
+        separatorBuilder: (context, index) => SizedBox(height: 4),
         itemBuilder: (context, trackIndex) {
           final track = widget.bloc.tracks[trackIndex];
 
           return Card(
-            color: Colors.brown[800],
-            elevation: 2,
+            color: Colors.grey[850],
+            elevation: 1,
+            margin: EdgeInsets.zero,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(8),
             ),
             child: Padding(
-              padding: EdgeInsets.all(8),
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               child: MobileTrackRow(
                 track: track,
                 currentBeat: currentBeat,
