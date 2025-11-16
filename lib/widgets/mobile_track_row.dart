@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:bird_flutter/bird_flutter.dart';
 import '../pages/main_bloc.dart';
 import '../pages/pattern.dart';
 
@@ -67,11 +66,16 @@ class MobileTrackRow extends StatelessWidget {
               endBeat - startBeat,
               (index) {
                 final beatIndex = startBeat + index;
-                return TrackStep(
-                  size: buttonSize,
-                  enabled: track.isEnabled.value[beatIndex],
-                  active: currentBeat == beatIndex,
-                  onPressed: () => track.toggle(beatIndex),
+                return ValueListenableBuilder<List<bool>>(
+                  valueListenable: track.isEnabled,
+                  builder: (context, enabledList, _) {
+                    return TrackStep(
+                      size: buttonSize,
+                      enabled: enabledList[beatIndex],
+                      active: currentBeat == beatIndex,
+                      onPressed: () => track.toggle(beatIndex),
+                    );
+                  },
                 );
               },
             ),
@@ -126,7 +130,7 @@ class MobileTrackRow extends StatelessWidget {
 
   void _showPatternMenu(BuildContext context, TrackBloc track) {
     HapticFeedback.mediumImpact();
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.grey[850],
       shape: RoundedRectangleBorder(

@@ -1,8 +1,8 @@
 import 'dart:async';
 
-import 'package:bird/bird.dart';
+import 'package:flutter/foundation.dart';
+import 'package:bird_flutter/bird_flutter.dart';
 import 'package:flutter_beat_sequencer/services/audio_service.dart';
-import 'package:quiver/async.dart';
 import 'package:flutter_beat_sequencer/pages/pattern.dart';
 
 abstract class Playable {
@@ -76,7 +76,7 @@ class PlaybackBloc extends HookBloc implements Playable {
   }
 
   void toggleMetronome() {
-    _metronomeStatus.add(!_metronomeStatus.value);
+    _metronomeStatus.value = !_metronomeStatus.value;
   }
 
   void addMeasure() {
@@ -139,13 +139,14 @@ class TimelineBloc extends HookBloc {
   final Signal<int> _atBeat = HookBloc.disposeSink(Signal(-1));
   final Signal<int> _totalBeats;
 
-  Wave<bool> isPlaying;
-  Wave<double> bpm;
-  Wave<int> atBeat;
+  Wave<bool> get isPlaying => _isPlaying.wave;
+  Wave<double> get bpm => _bpm.wave;
+  Wave<int> get atBeat => _atBeat.wave;
 
-  StreamSubscription<DateTime> _metronome;
+  StreamSubscription<DateTime>? _metronome;
+  final void Function(TimelineBloc, int) _playAtBeat;
 
-  TimelineBloc(void Function(TimelineBloc, int) playAtBeat, this._totalBeats) {
+  TimelineBloc(void Function(TimelineBloc, int) playAtBeat, this._totalBeats) : _playAtBeat = playAtBeat {
     final __isPlaying = _isPlaying.wave.distinct().subscribe((play) {
       if (_metronome != null) {
         _metronome.cancel();
@@ -166,28 +167,29 @@ class TimelineBloc extends HookBloc {
         });
       }
     });
-    disposeLater(__isPlaying.cancel);
+  }
 
-    isPlaying = _isPlaying.wave;
-    bpm = _bpm.wave;
-    atBeat = _atBeat.wave;
+  @override
+  void dispose() {
+    _metronome?.cancel();
+    super.dispose();
   }
 
   void togglePlayback() {
-    _isPlaying.add(!_isPlaying.value);
+    _isPlaying.value = !_isPlaying.value;
   }
 
   void play() {
-    _isPlaying.add(true);
+    _isPlaying.value = true;
   }
 
   void stop() {
-    _isPlaying.add(false);
-    _atBeat.add(-1);
+    _isPlaying.value = false;
+    _atBeat.value = -1;
   }
 
   void setBpm(double newBpm) {
-    _bpm.add(newBpm);
+    _bpm.value = newBpm;
   }
 
   void _increaseAtBeat() {
@@ -198,27 +200,29 @@ class TimelineBloc extends HookBloc {
   }
 
   void setBeat(int i) {
-    _atBeat.add(i);
+    _atBeat.value = i;
   }
 }
 
-class TrackBloc extends HookBloc implements Playable {
-  Signal<List<bool>> _isEnabled;
-  Wave<List<bool>> isEnabled;
+class TrackBloc extends ChangeNotifier implements Playable {
+  final ValueNotifier<List<bool>> _isEnabled;
+  ValueListenable<List<bool>> get isEnabled => _isEnabled;
 
   final SoundSelector sound;
 
-  TrackBloc(int initWith, this.sound) {
-    _isEnabled = Signal(List.generate(initWith, (a) => false));
-    disposeSinkLater(_isEnabled);
-    isEnabled = _isEnabled.wave;
+  TrackBloc(int initWith, this.sound) : _isEnabled = ValueNotifier<List<bool>>(List.generate(initWith, (a) => false));
+
+  @override
+  void dispose() {
+    _isEnabled.dispose();
+    super.dispose();
   }
 
   void toggle(int index) {
-    final cur = _isEnabled.value;
+    final cur = List<bool>.from(_isEnabled.value);
     if (cur.length > index) {
       cur[index] = !cur[index];
-      _isEnabled.add(cur);
+      _isEnabled.value = cur;
     }
   }
 
@@ -237,11 +241,11 @@ class TrackBloc extends HookBloc implements Playable {
   }
 
   void setPattern(TrackPattern pattern) {
-    _isEnabled.add(_isEnabled.value
+    _isEnabled.value = _isEnabled.value
         .asMap()
         .keys
         .map(pattern.builder)
-        .toList());
+        .toList();
   }
 
   void extendPattern(int newLength) {
@@ -250,13 +254,13 @@ class TrackBloc extends HookBloc implements Playable {
       newLength,
       (i) => i < current.length ? current[i] : false,
     );
-    _isEnabled.add(extended);
+    _isEnabled.value = extended;
   }
 
   void truncatePattern(int newLength) {
     final current = _isEnabled.value;
     final truncated = current.sublist(0, newLength);
-    _isEnabled.add(truncated);
+    _isEnabled.value = truncated;
   }
 }
 

@@ -6,17 +6,11 @@ author: Modestas Valauskas <valauskasmodestas+dartpub@gmail.com>
 issue_tracker: https://github.com/modulovalue/flutter_beat_sequencer/issues
 
 environment:
-  sdk: ">=2.4.0 <3.0.0"
+  sdk: ">=2.12.0 <4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
-  bird: ^0.0.2
-  bird_flutter: ^0.0.2+1
-  modulovalue_project_widgets:
-    git:
-      url: git://github.com/modulovalue/modulovalue_project_widgets.git
-      ref: 19d34e2be61bd27f57d4df979fcc1cb83779ee38
   just_audio: ^0.9.36
 
 dev_dependencies:

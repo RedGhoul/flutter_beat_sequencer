@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:bird_flutter/bird_flutter.dart';
 import 'services/audio_service.dart';
 import 'pages/mobile_layout.dart';
 import 'pages/main_bloc.dart';
@@ -121,22 +120,32 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class MyHomePage extends StatelessWidget {
+class MyHomePage extends StatefulWidget {
   final AudioService audioService;
 
   const MyHomePage({Key? key, required this.audioService}) : super(key: key);
 
   @override
+  State<MyHomePage> createState() => _MyHomePageState();
+}
+
+class _MyHomePageState extends State<MyHomePage> {
+  late PlaybackBloc _bloc;
+
+  @override
+  void initState() {
+    super.initState();
+    _bloc = PlaybackBloc(widget.audioService);
+  }
+
+  @override
+  void dispose() {
+    _bloc.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return $$ >> (context) {
-      final bloc = HookBloc.useMemo(
-        () => PlaybackBloc(audioService),
-        [],
-      );
-
-      HookBloc.useDispose(bloc);
-
-      return MobileSequencerLayout(bloc: bloc);
-    };
+    return MobileSequencerLayout(bloc: _bloc);
   }
 }

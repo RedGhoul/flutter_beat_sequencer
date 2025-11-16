@@ -100,10 +100,16 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
   }
 
   Widget _buildControlPanel() {
-    return $$ >> (context) {
-      final isPlaying = widget.bloc.timeline.isPlaying.value;
-      final metronomeOn = widget.bloc.metronomeStatus.value;
-      final bpm = (widget.bloc.timeline.bpm.value / 4.0).round();
+    return ValueListenableBuilder<bool>(
+      valueListenable: widget.bloc.timeline.isPlaying,
+      builder: (context, isPlaying, _) {
+        return ValueListenableBuilder<bool>(
+          valueListenable: widget.bloc.metronomeStatus,
+          builder: (context, metronomeOn, _) {
+            return ValueListenableBuilder<double>(
+              valueListenable: widget.bloc.timeline.bpm,
+              builder: (context, bpmValue, _) {
+                final bpm = (bpmValue / 4.0).round();
 
       return SingleChildScrollView(
         padding: EdgeInsets.all(12),
@@ -358,7 +364,12 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
           ],
         ),
       );
-    };
+              },
+            );
+          },
+        );
+      },
+    );
   }
 
   Widget _buildPageIndicator(int totalPages) {
