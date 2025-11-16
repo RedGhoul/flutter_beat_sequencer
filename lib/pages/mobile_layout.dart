@@ -35,12 +35,16 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
 
         return Scaffold(
       backgroundColor: Colors.grey[900],
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddTrackDialog(context),
-        backgroundColor: Colors.cyan,
-        foregroundColor: Colors.black,
-        child: Icon(Icons.add),
-        tooltip: 'Add Track',
+      floatingActionButton: Semantics(
+        label: 'Add new track',
+        button: true,
+        child: FloatingActionButton(
+          onPressed: () => _showAddTrackDialog(context),
+          backgroundColor: Colors.cyan,
+          foregroundColor: Colors.black,
+          child: const Icon(Icons.add),
+          tooltip: 'Add Track',
+        ),
       ),
       body: Row(
         children: [
@@ -67,11 +71,11 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
                 // Top bar with page indicator and beat indicator
                 Container(
                   color: Colors.grey[850],
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   child: Column(
                     children: [
                       _buildPageIndicator(totalPages),
-                      SizedBox(height: 6),
+                      const SizedBox(height: 6),
                       _buildBeatIndicator(),
                     ],
                   ),
@@ -115,12 +119,12 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
                 final bpm = (bpmValue / 4.0).round();
 
       return SingleChildScrollView(
-        padding: EdgeInsets.all(12),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // App title
-            Text(
+            const Text(
               'Beat\nSequencer',
               style: TextStyle(
                 fontSize: 20,
@@ -131,11 +135,11 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
               textAlign: TextAlign.center,
             ),
 
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
 
             // BPM display
             Container(
-              padding: EdgeInsets.symmetric(vertical: 12),
+              padding: const EdgeInsets.symmetric(vertical: 12),
               decoration: BoxDecoration(
                 color: Colors.grey[800],
                 borderRadius: BorderRadius.circular(8),
@@ -150,7 +154,7 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text(
                     '$bpm',
                     style: TextStyle(
@@ -163,7 +167,7 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
               ),
             ),
 
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
 
             // BPM slider (vertical orientation)
             Text(
@@ -175,32 +179,40 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
               ),
               textAlign: TextAlign.center,
             ),
-            Slider(
-              value: bpm.toDouble(),
-              min: 60.0,
-              max: 200.0,
-              divisions: 140,
-              label: '$bpm',
-              onChanged: (value) {
-                widget.bloc.timeline.setBpm(value * 4.0);
-              },
-              activeColor: Colors.cyan,
-              inactiveColor: Colors.grey[700],
+            Semantics(
+              label: 'Tempo slider, current BPM: $bpm',
+              value: '$bpm beats per minute',
+              slider: true,
+              child: Slider(
+                value: bpm.toDouble(),
+                min: 60.0,
+                max: 200.0,
+                divisions: 140,
+                label: '$bpm',
+                onChanged: (value) {
+                  widget.bloc.timeline.setBpm(value * 4.0);
+                },
+                activeColor: Colors.cyan,
+                inactiveColor: Colors.grey[700],
+              ),
             ),
 
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
 
             // Play/Stop button
-            ElevatedButton(
-              onPressed: () {
-                if (isPlaying) {
-                  widget.bloc.timeline.stop();
-                } else {
-                  widget.bloc.timeline.play();
-                }
-              },
+            Semantics(
+              label: isPlaying ? 'Stop playback' : 'Start playback',
+              button: true,
+              child: ElevatedButton(
+                onPressed: () {
+                  if (isPlaying) {
+                    widget.bloc.timeline.stop();
+                  } else {
+                    widget.bloc.timeline.play();
+                  }
+                },
               style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.symmetric(vertical: 16),
+                padding: const EdgeInsets.symmetric(vertical: 16),
                 backgroundColor: isPlaying ? Colors.red[700] : Colors.green[600],
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
@@ -214,22 +226,26 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
                     isPlaying ? Icons.stop : Icons.play_arrow,
                     size: 24,
                   ),
-                  SizedBox(width: 8),
+                  const SizedBox(width: 8),
                   Text(
                     isPlaying ? 'Stop' : 'Play',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
+              ),
             ),
 
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
 
             // Metronome toggle
-            ElevatedButton(
-              onPressed: widget.bloc.toggleMetronome,
+            Semantics(
+              label: metronomeOn ? 'Turn metronome off' : 'Turn metronome on',
+              button: true,
+              child: ElevatedButton(
+                onPressed: widget.bloc.toggleMetronome,
               style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.symmetric(vertical: 14),
+                padding: const EdgeInsets.symmetric(vertical: 14),
                 backgroundColor: metronomeOn ? Colors.cyan : Colors.grey[800],
                 foregroundColor: metronomeOn ? Colors.black : Colors.white,
                 shape: RoundedRectangleBorder(
@@ -243,80 +259,89 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
                     metronomeOn ? Icons.volume_up : Icons.volume_off,
                     size: 20,
                   ),
-                  SizedBox(width: 6),
-                  Text(
+                  const SizedBox(width: 6),
+                  const Text(
                     'Metro',
                     style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
+              ),
             ),
 
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
 
             // Save/Load/Export buttons
             Row(
               children: [
                 Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => _showSavePatternDialog(context),
-                    style: ElevatedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(vertical: 12),
-                      backgroundColor: Colors.blue[700],
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                  child: Tooltip(
+                    message: 'Save current pattern',
+                    child: ElevatedButton(
+                      onPressed: () => _showSavePatternDialog(context),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        backgroundColor: Colors.blue[700],
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.save, size: 18),
-                        SizedBox(height: 2),
-                        Text('Save', style: TextStyle(fontSize: 11)),
-                      ],
+                      child: const Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.save, size: 18),
+                          SizedBox(height: 2),
+                          Text('Save', style: TextStyle(fontSize: 11)),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-                SizedBox(width: 8),
+                const SizedBox(width: 8),
                 Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => _showLoadPatternDialog(context),
-                    style: ElevatedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(vertical: 12),
-                      backgroundColor: Colors.purple[700],
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                  child: Tooltip(
+                    message: 'Load saved pattern',
+                    child: ElevatedButton(
+                      onPressed: () => _showLoadPatternDialog(context),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        backgroundColor: Colors.purple[700],
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.folder_open, size: 18),
-                        SizedBox(height: 2),
-                        Text('Load', style: TextStyle(fontSize: 11)),
-                      ],
+                      child: const Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.folder_open, size: 18),
+                          SizedBox(height: 2),
+                          Text('Load', style: TextStyle(fontSize: 11)),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ],
             ),
 
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
 
             // Export button
-            ElevatedButton(
-              onPressed: () => _showExportDialog(context),
-              style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                backgroundColor: Colors.orange[700],
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+            Tooltip(
+              message: 'Export pattern to MP3 file',
+              child: ElevatedButton(
+                onPressed: () => _showExportDialog(context),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  backgroundColor: Colors.orange[700],
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
-              ),
-              child: Row(
+              child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.download, size: 18),
@@ -324,9 +349,10 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
                   Text('Export MP3', style: TextStyle(fontSize: 12)),
                 ],
               ),
+              ),
             ),
 
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
 
             // Measures control
             Builder(
@@ -334,7 +360,7 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
                 final measures = widget.bloc.measures;
 
                 return Container(
-                padding: EdgeInsets.all(10),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: Colors.grey[800],
                   borderRadius: BorderRadius.circular(8),
@@ -349,7 +375,7 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    SizedBox(height: 6),
+                    const SizedBox(height: 6),
                     Text(
                       '$measures',
                       style: TextStyle(
@@ -358,36 +384,42 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
                         color: Colors.cyan,
                       ),
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     Row(
                       children: [
                         Expanded(
-                          child: ElevatedButton(
-                            onPressed: widget.bloc.removeMeasure,
-                            style: ElevatedButton.styleFrom(
-                              padding: EdgeInsets.symmetric(vertical: 8),
-                              backgroundColor: Colors.grey[700],
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(6),
+                          child: Tooltip(
+                            message: 'Remove a measure (16 beats)',
+                            child: ElevatedButton(
+                              onPressed: widget.bloc.removeMeasure,
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                backgroundColor: Colors.grey[700],
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
                               ),
+                              child: const Icon(Icons.remove, size: 18),
                             ),
-                            child: Icon(Icons.remove, size: 18),
                           ),
                         ),
-                        SizedBox(width: 8),
+                        const SizedBox(width: 8),
                         Expanded(
-                          child: ElevatedButton(
-                            onPressed: widget.bloc.addMeasure,
-                            style: ElevatedButton.styleFrom(
-                              padding: EdgeInsets.symmetric(vertical: 8),
-                              backgroundColor: Colors.cyan,
-                              foregroundColor: Colors.black,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(6),
+                          child: Tooltip(
+                            message: 'Add a measure (16 beats)',
+                            child: ElevatedButton(
+                              onPressed: widget.bloc.addMeasure,
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                backgroundColor: Colors.cyan,
+                                foregroundColor: Colors.black,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
                               ),
+                              child: const Icon(Icons.add, size: 18),
                             ),
-                            child: Icon(Icons.add, size: 18),
                           ),
                         ),
                       ],
@@ -398,7 +430,7 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
               },
             ),
 
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
 
             // Visual metronome
             Center(
@@ -409,7 +441,7 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
                 final isBar = currentBeat % 16 == 0;
 
                 return AnimatedContainer(
-                  duration: Duration(milliseconds: 100),
+                  duration: const Duration(milliseconds: 100),
                   width: 50,
                   height: 50,
                   decoration: BoxDecoration(
@@ -431,7 +463,7 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
                   child: Center(
                     child: Text(
                       '${(currentBeat % 4) + 1}',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
@@ -461,12 +493,14 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
           'Page ${_currentPage + 1}/$totalPages',
           style: TextStyle(color: Colors.grey[400], fontSize: 11),
         ),
-        SizedBox(width: 10),
+        const SizedBox(width: 10),
         ...List.generate(totalPages, (index) {
-          return Container(
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeInOut,
             width: _currentPage == index ? 24 : 6,
             height: 6,
-            margin: EdgeInsets.symmetric(horizontal: 3),
+            margin: const EdgeInsets.symmetric(horizontal: 3),
             decoration: BoxDecoration(
               color: _currentPage == index ? Colors.cyan : Colors.grey[700],
               borderRadius: BorderRadius.circular(3),
@@ -483,7 +517,7 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
       builder: (context, currentBeat, _) {
         final startBeat = _currentPage * _beatsPerPage;
 
-        return Container(
+        return SizedBox(
         height: 20,
         child: Row(
           children: List.generate(_beatsPerPage, (index) {
@@ -494,8 +528,10 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
             return Expanded(
               child: GestureDetector(
                 onTap: () => widget.bloc.timeline.setBeat(beatIndex),
-                child: Container(
-                  margin: EdgeInsets.symmetric(horizontal: 1),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  curve: Curves.easeOut,
+                  margin: const EdgeInsets.symmetric(horizontal: 1),
                   decoration: BoxDecoration(
                     color: isActive
                         ? Colors.cyan
@@ -508,10 +544,11 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
                   child: Center(
                     child: Text(
                       '${beatIndex % 16 + 1}',
-                      style: TextStyle(
-                        color: isActive ? Colors.black : Colors.grey[500],
+                      style: const TextStyle(
                         fontSize: 9,
                         fontWeight: FontWeight.bold,
+                      ).copyWith(
+                        color: isActive ? Colors.black : Colors.grey[500],
                       ),
                     ),
                   ),
@@ -545,29 +582,43 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
           valueListenable: widget.bloc.tracks,
           builder: (context, tracksList, _) {
             return ListView.separated(
-              padding: EdgeInsets.all(8),
+              padding: const EdgeInsets.all(8),
               itemCount: tracksList.length,
-              separatorBuilder: (context, index) => SizedBox(height: 4),
+              separatorBuilder: (context, index) => const SizedBox(height: 4),
               itemBuilder: (context, trackIndex) {
                 final track = tracksList[trackIndex];
 
-                return Card(
-                  color: Colors.grey[850],
-                  elevation: 1,
-                  margin: EdgeInsets.zero,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                    child: MobileTrackRow(
-                      track: track,
-                      currentBeat: currentBeat,
-                      startBeat: startBeat,
-                      endBeat: endBeat,
-                      onDelete: tracksList.length > 1
-                          ? () => widget.bloc.removeTrack(trackIndex)
-                          : null,
+                return TweenAnimationBuilder<double>(
+                  duration: const Duration(milliseconds: 300),
+                  tween: Tween(begin: 0.0, end: 1.0),
+                  curve: Curves.easeOut,
+                  builder: (context, value, child) {
+                    return Transform.translate(
+                      offset: Offset(0, 20 * (1 - value)),
+                      child: Opacity(
+                        opacity: value,
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: Card(
+                    color: Colors.grey[850],
+                    elevation: 1,
+                    margin: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      child: MobileTrackRow(
+                        track: track,
+                        currentBeat: currentBeat,
+                        startBeat: startBeat,
+                        endBeat: endBeat,
+                        onDelete: tracksList.length > 1
+                            ? () => widget.bloc.removeTrack(trackIndex)
+                            : null,
+                      ),
                     ),
                   ),
                 );
@@ -597,19 +648,19 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
         expand: false,
         builder: (context, scrollController) {
           return Container(
-            padding: EdgeInsets.all(16),
+            padding: const EdgeInsets.all(16),
             child: Column(
               children: [
                 Container(
                   width: 40,
                   height: 4,
-                  margin: EdgeInsets.only(bottom: 16),
+                  margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
                     color: Colors.grey[700],
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                Text(
+                const Text(
                   'Add Track',
                   style: TextStyle(
                     fontSize: 20,
@@ -617,7 +668,7 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
                     color: Colors.white,
                   ),
                 ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
                 Expanded(
                   child: ListView(
                     controller: scrollController,
@@ -629,10 +680,10 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Padding(
-                            padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                             child: Text(
                               category,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.cyan,
@@ -640,10 +691,10 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
                             ),
                           ),
                           ...sounds.map((sound) => ListTile(
-                            leading: Icon(Icons.music_note, color: Colors.cyan),
+                            leading: const Icon(Icons.music_note, color: Colors.cyan),
                             title: Text(
                               sound.displayName,
-                              style: TextStyle(color: Colors.white),
+                              style: const TextStyle(color: Colors.white),
                             ),
                             onTap: () {
                               HapticFeedback.selectionClick();
@@ -673,21 +724,21 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Colors.grey[850],
-        title: Text(
+        title: const Text(
           'Save Pattern',
           style: TextStyle(color: Colors.white),
         ),
         content: TextField(
           controller: nameController,
           autofocus: true,
-          style: TextStyle(color: Colors.white),
+          style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(
             hintText: 'Pattern name',
             hintStyle: TextStyle(color: Colors.grey[500]),
-            enabledBorder: UnderlineInputBorder(
+            enabledBorder: const UnderlineInputBorder(
               borderSide: BorderSide(color: Colors.cyan),
             ),
-            focusedBorder: UnderlineInputBorder(
+            focusedBorder: const UnderlineInputBorder(
               borderSide: BorderSide(color: Colors.cyan, width: 2),
             ),
           ),
@@ -735,7 +786,7 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
               backgroundColor: Colors.blue[700],
               foregroundColor: Colors.white,
             ),
-            child: Text('Save'),
+            child: const Text('Save'),
           ),
         ],
       ),
@@ -749,17 +800,6 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
     final patterns = await widget.bloc.getSavedPatterns();
 
     if (!context.mounted) return;
-
-    if (patterns.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('No saved patterns found'),
-          backgroundColor: Colors.orange[700],
-          duration: Duration(seconds: 2),
-        ),
-      );
-      return;
-    }
 
     showModalBottomSheet<void>(
       context: context,
@@ -775,19 +815,19 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
         expand: false,
         builder: (context, scrollController) {
           return Container(
-            padding: EdgeInsets.all(16),
+            padding: const EdgeInsets.all(16),
             child: Column(
               children: [
                 Container(
                   width: 40,
                   height: 4,
-                  margin: EdgeInsets.only(bottom: 16),
+                  margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
                     color: Colors.grey[700],
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                Text(
+                const Text(
                   'Load Pattern',
                   style: TextStyle(
                     fontSize: 20,
@@ -795,9 +835,40 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
                     color: Colors.white,
                   ),
                 ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
                 Expanded(
-                  child: ListView.separated(
+                  child: patterns.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.music_note_outlined,
+                                size: 64,
+                                color: Colors.grey[600],
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No Saved Patterns',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey[400],
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Create a pattern and save it\nto see it here',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[500],
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.separated(
                     controller: scrollController,
                     itemCount: patterns.length,
                     separatorBuilder: (context, index) => Divider(color: Colors.grey[800]),
