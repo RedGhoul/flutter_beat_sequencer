@@ -4,6 +4,7 @@ import 'main_bloc.dart';
 import '../widgets/mobile_track_row.dart';
 import '../models/sound_library.dart';
 import '../services/pattern_storage.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class MobileSequencerLayout extends StatefulWidget {
   final PlaybackBloc bloc;
@@ -253,7 +254,7 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
 
             SizedBox(height: 20),
 
-            // Save/Load buttons
+            // Save/Load/Export buttons
             Row(
               children: [
                 Expanded(
@@ -300,6 +301,29 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
                   ),
                 ),
               ],
+            ),
+
+            SizedBox(height: 10),
+
+            // Export button
+            ElevatedButton(
+              onPressed: () => _showExportDialog(context),
+              style: ElevatedButton.styleFrom(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                backgroundColor: Colors.orange[700],
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.download, size: 18),
+                  SizedBox(width: 6),
+                  Text('Export MP3', style: TextStyle(fontSize: 12)),
+                ],
+              ),
             ),
 
             SizedBox(height: 20),
@@ -887,6 +911,306 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
         },
       ),
     );
+  }
+
+  void _showExportDialog(BuildContext context) {
+    HapticFeedback.mediumImpact();
+    final TextEditingController nameController = TextEditingController(text: 'my_beat');
+    int loopCount = 1;
+    int bitrate = 128;
+    bool includeMetronome = false;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            backgroundColor: Colors.grey[850],
+            title: Text(
+              'Export to MP3',
+              style: TextStyle(color: Colors.white),
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Filename input
+                  TextField(
+                    controller: nameController,
+                    style: TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      labelText: 'File name',
+                      labelStyle: TextStyle(color: Colors.grey[400]),
+                      suffixText: '.mp3',
+                      suffixStyle: TextStyle(color: Colors.cyan),
+                      enabledBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(color: Colors.cyan),
+                      ),
+                      focusedBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(color: Colors.cyan, width: 2),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 20),
+
+                  // Loop count
+                  Text('Loop Count', style: TextStyle(color: Colors.white, fontSize: 14)),
+                  Slider(
+                    value: loopCount.toDouble(),
+                    min: 1,
+                    max: 8,
+                    divisions: 7,
+                    label: '${loopCount}x',
+                    activeColor: Colors.orange,
+                    onChanged: (value) {
+                      setState(() {
+                        loopCount = value.toInt();
+                      });
+                    },
+                  ),
+                  Text('${loopCount}x', style: TextStyle(color: Colors.grey[400], fontSize: 12)),
+                  SizedBox(height: 10),
+
+                  // Bitrate
+                  Text('Bitrate (kbps)', style: TextStyle(color: Colors.white, fontSize: 14)),
+                  Slider(
+                    value: bitrate.toDouble(),
+                    min: 96,
+                    max: 320,
+                    divisions: 7,
+                    label: '$bitrate kbps',
+                    activeColor: Colors.orange,
+                    onChanged: (value) {
+                      setState(() {
+                        bitrate = (value / 32).round() * 32; // Round to nearest 32
+                      });
+                    },
+                  ),
+                  Text('$bitrate kbps', style: TextStyle(color: Colors.grey[400], fontSize: 12)),
+                  SizedBox(height: 10),
+
+                  // Metronome checkbox
+                  CheckboxListTile(
+                    title: Text('Include Metronome', style: TextStyle(color: Colors.white)),
+                    value: includeMetronome,
+                    activeColor: Colors.orange,
+                    onChanged: (value) {
+                      setState(() {
+                        includeMetronome = value ?? false;
+                      });
+                    },
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Cancel', style: TextStyle(color: Colors.grey[400])),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  final name = nameController.text.trim();
+                  if (name.isEmpty) {
+                    return;
+                  }
+
+                  Navigator.pop(context);
+
+                  // Show progress dialog
+                  _showExportProgressDialog(
+                    context,
+                    name,
+                    loopCount,
+                    bitrate,
+                    includeMetronome,
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange[700],
+                  foregroundColor: Colors.white,
+                ),
+                child: Text('Export'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _showExportProgressDialog(
+    BuildContext context,
+    String fileName,
+    int loopCount,
+    int bitrate,
+    bool includeMetronome,
+  ) async {
+    double progress = 0.0;
+
+    // Show progress dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            backgroundColor: Colors.grey[850],
+            title: Text('Exporting...', style: TextStyle(color: Colors.white)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                LinearProgressIndicator(
+                  value: progress,
+                  backgroundColor: Colors.grey[700],
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
+                ),
+                SizedBox(height: 16),
+                Text(
+                  '${(progress * 100).toInt()}%',
+                  style: TextStyle(color: Colors.white, fontSize: 18),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+
+    try {
+      // Check and request storage permission
+      if (!await _requestStoragePermission()) {
+        if (context.mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Storage permission required for export'),
+              backgroundColor: Colors.red[700],
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
+      }
+
+      // Perform export
+      final filePath = await widget.bloc.exportPattern(
+        fileName: fileName,
+        loopCount: loopCount,
+        bitrate: bitrate,
+        includeMetronome: includeMetronome,
+        onProgress: (p) {
+          if (context.mounted) {
+            setState(() {
+              progress = p;
+            });
+          }
+        },
+      );
+
+      if (context.mounted) {
+        Navigator.pop(context); // Close progress dialog
+
+        if (filePath != null) {
+          // Show success dialog
+          _showExportSuccessDialog(context, filePath);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Export failed. Please try again.'),
+              backgroundColor: Colors.red[700],
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context); // Close progress dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Export error: $e'),
+            backgroundColor: Colors.red[700],
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  void _showExportSuccessDialog(BuildContext context, String filePath) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[850],
+        title: Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.green, size: 28),
+            SizedBox(width: 8),
+            Text('Export Successful!', style: TextStyle(color: Colors.white)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Your beat has been exported to:',
+              style: TextStyle(color: Colors.grey[400]),
+            ),
+            SizedBox(height: 8),
+            SelectableText(
+              filePath,
+              style: TextStyle(color: Colors.cyan, fontSize: 12),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Close', style: TextStyle(color: Colors.grey[400])),
+          ),
+          ElevatedButton.icon(
+            onPressed: () async {
+              try {
+                await widget.bloc.shareExport(filePath);
+                if (context.mounted) {
+                  Navigator.pop(context);
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Share error: $e'),
+                      backgroundColor: Colors.red[700],
+                      duration: Duration(seconds: 3),
+                    ),
+                  );
+                }
+              }
+            },
+            icon: Icon(Icons.share),
+            label: Text('Share'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange[700],
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<bool> _requestStoragePermission() async {
+    // On Android, check storage permission
+    if (await Permission.storage.isGranted) {
+      return true;
+    }
+
+    final status = await Permission.storage.request();
+    return status.isGranted;
   }
 
   String _formatDateTime(DateTime dateTime) {

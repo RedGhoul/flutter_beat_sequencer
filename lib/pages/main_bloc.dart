@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_beat_sequencer/services/audio_service.dart';
 import 'package:flutter_beat_sequencer/services/pattern_storage.dart';
+import 'package:flutter_beat_sequencer/services/export_service.dart';
 import 'package:flutter_beat_sequencer/pages/pattern.dart';
 
 abstract class Playable {
@@ -15,6 +16,7 @@ class PlaybackBloc extends ChangeNotifier implements Playable {
   final ValueNotifier<List<TrackBloc>> _tracks = ValueNotifier<List<TrackBloc>>([]);
   final AudioService audioService;
   final PatternStorage _patternStorage = PatternStorage();
+  final ExportService _exportService = ExportService();
 
   ValueListenable<List<TrackBloc>> get tracks => _tracks;
   ValueListenable<bool> get metronomeStatus => _metronomeStatus;
@@ -212,6 +214,31 @@ class PlaybackBloc extends ChangeNotifier implements Playable {
   /// Delete a saved pattern
   Future<void> deletePattern(String id) async {
     await _patternStorage.deletePattern(id);
+  }
+
+  /// Export the current pattern to an MP3 file
+  Future<String?> exportPattern({
+    required String fileName,
+    bool includeMetronome = false,
+    int loopCount = 1,
+    int bitrate = 128,
+    Function(double)? onProgress,
+  }) async {
+    return await _exportService.exportToMP3(
+      tracks: _tracks.value,
+      totalBeats: _totalBeats.value,
+      bpm: timeline.bpm.value,
+      fileName: fileName,
+      includeMetronome: includeMetronome,
+      loopCount: loopCount,
+      bitrate: bitrate,
+      onProgress: onProgress,
+    );
+  }
+
+  /// Share an exported MP3 file
+  Future<void> shareExport(String filePath) async {
+    await _exportService.shareMP3(filePath);
   }
 
   int get measures => (_totalBeats.value / 16).ceil();
