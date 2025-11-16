@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'main_bloc.dart';
 import '../widgets/mobile_track_row.dart';
 import '../models/sound_library.dart';
+import '../services/pattern_storage.dart';
 
 class MobileSequencerLayout extends StatefulWidget {
   final PlaybackBloc bloc;
@@ -248,6 +249,57 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
                   ),
                 ],
               ),
+            ),
+
+            SizedBox(height: 20),
+
+            // Save/Load buttons
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => _showSavePatternDialog(context),
+                    style: ElevatedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      backgroundColor: Colors.blue[700],
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.save, size: 18),
+                        SizedBox(height: 2),
+                        Text('Save', style: TextStyle(fontSize: 11)),
+                      ],
+                    ),
+                  ),
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => _showLoadPatternDialog(context),
+                    style: ElevatedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      backgroundColor: Colors.purple[700],
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.folder_open, size: 18),
+                        SizedBox(height: 2),
+                        Text('Load', style: TextStyle(fontSize: 11)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
 
             SizedBox(height: 20),
@@ -587,5 +639,274 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
         },
       ),
     );
+  }
+
+  void _showSavePatternDialog(BuildContext context) {
+    HapticFeedback.mediumImpact();
+    final TextEditingController nameController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[850],
+        title: Text(
+          'Save Pattern',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: TextField(
+          controller: nameController,
+          autofocus: true,
+          style: TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: 'Pattern name',
+            hintStyle: TextStyle(color: Colors.grey[500]),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.cyan),
+            ),
+            focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.cyan, width: 2),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: TextStyle(color: Colors.grey[400])),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final name = nameController.text.trim();
+              if (name.isEmpty) {
+                return;
+              }
+
+              Navigator.pop(context);
+
+              try {
+                await widget.bloc.savePattern(name);
+                HapticFeedback.lightImpact();
+
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Pattern "$name" saved!'),
+                      backgroundColor: Colors.green[700],
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error saving pattern: $e'),
+                      backgroundColor: Colors.red[700],
+                      duration: Duration(seconds: 3),
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue[700],
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLoadPatternDialog(BuildContext context) async {
+    HapticFeedback.mediumImpact();
+
+    // Load the list of saved patterns
+    final patterns = await widget.bloc.getSavedPatterns();
+
+    if (!context.mounted) return;
+
+    if (patterns.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('No saved patterns found'),
+          backgroundColor: Colors.orange[700],
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.grey[850],
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (context, scrollController) {
+          return Container(
+            padding: EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[700],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Text(
+                  'Load Pattern',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                SizedBox(height: 16),
+                Expanded(
+                  child: ListView.separated(
+                    controller: scrollController,
+                    itemCount: patterns.length,
+                    separatorBuilder: (context, index) => Divider(color: Colors.grey[800]),
+                    itemBuilder: (context, index) {
+                      final pattern = patterns[index];
+                      final formattedDate = _formatDateTime(pattern.savedAt);
+
+                      return ListTile(
+                        leading: Icon(Icons.music_note, color: Colors.purple),
+                        title: Text(
+                          pattern.name,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        subtitle: Text(
+                          'Saved: $formattedDate',
+                          style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: Icon(Icons.delete, color: Colors.red[400]),
+                              onPressed: () async {
+                                HapticFeedback.mediumImpact();
+
+                                // Confirm deletion
+                                final confirmed = await showDialog<bool>(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    backgroundColor: Colors.grey[850],
+                                    title: Text(
+                                      'Delete Pattern?',
+                                      style: TextStyle(color: Colors.white),
+                                    ),
+                                    content: Text(
+                                      'Are you sure you want to delete "${pattern.name}"?',
+                                      style: TextStyle(color: Colors.white70),
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context, false),
+                                        child: Text('Cancel', style: TextStyle(color: Colors.grey[400])),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: () => Navigator.pop(context, true),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.red[700],
+                                        ),
+                                        child: Text('Delete'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+
+                                if (confirmed == true) {
+                                  await widget.bloc.deletePattern(pattern.id);
+                                  if (context.mounted) {
+                                    Navigator.pop(context);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Pattern deleted'),
+                                        backgroundColor: Colors.red[700],
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                        onTap: () async {
+                          HapticFeedback.selectionClick();
+                          Navigator.pop(context);
+
+                          try {
+                            await widget.bloc.loadPattern(pattern.id);
+                            HapticFeedback.lightImpact();
+
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Pattern "${pattern.name}" loaded!'),
+                                  backgroundColor: Colors.purple[700],
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error loading pattern: $e'),
+                                  backgroundColor: Colors.red[700],
+                                  duration: Duration(seconds: 3),
+                                ),
+                              );
+                            }
+                          }
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  String _formatDateTime(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inDays == 0) {
+      if (difference.inHours == 0) {
+        if (difference.inMinutes == 0) {
+          return 'Just now';
+        }
+        return '${difference.inMinutes}m ago';
+      }
+      return '${difference.inHours}h ago';
+    } else if (difference.inDays == 1) {
+      return 'Yesterday';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays}d ago';
+    } else {
+      return '${dateTime.month}/${dateTime.day}/${dateTime.year}';
+    }
   }
 }

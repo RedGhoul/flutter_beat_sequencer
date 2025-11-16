@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_beat_sequencer/services/audio_service.dart';
+import 'package:flutter_beat_sequencer/services/pattern_storage.dart';
 import 'package:flutter_beat_sequencer/pages/pattern.dart';
 
 abstract class Playable {
@@ -13,6 +14,7 @@ class PlaybackBloc extends ChangeNotifier implements Playable {
   final ValueNotifier<int> _totalBeats = ValueNotifier<int>(32);
   final ValueNotifier<List<TrackBloc>> _tracks = ValueNotifier<List<TrackBloc>>([]);
   final AudioService audioService;
+  final PatternStorage _patternStorage = PatternStorage();
 
   ValueListenable<List<TrackBloc>> get tracks => _tracks;
   ValueListenable<bool> get metronomeStatus => _metronomeStatus;
@@ -25,28 +27,28 @@ class PlaybackBloc extends ChangeNotifier implements Playable {
     final initialTracks = [
       TrackBloc(initialBeats, SoundSelector("808", () {
         audioService.playSound('bass');
-      })),
+      }), 'bass'),
       TrackBloc(initialBeats, SoundSelector("Clap", () {
         audioService.playSound('clap');
-      })),
+      }), 'clap'),
       TrackBloc(initialBeats, SoundSelector("Hat", () {
         audioService.playSound('hat');
-      })),
+      }), 'hat'),
       TrackBloc(initialBeats, SoundSelector("Open Hat", () {
         audioService.playSound('open_hat');
-      })),
+      }), 'open_hat'),
       TrackBloc(initialBeats, SoundSelector("Kick 1", () {
         audioService.playSound('kick_1');
-      })),
+      }), 'kick_1'),
       TrackBloc(initialBeats, SoundSelector("Kick 2", () {
         audioService.playSound('kick_2');
-      })),
+      }), 'kick_2'),
       TrackBloc(initialBeats, SoundSelector("Snare 1", () {
         audioService.playSound('snare_1');
-      })),
+      }), 'snare_1'),
       TrackBloc(initialBeats, SoundSelector("Snare 2", () {
         audioService.playSound('snare_2');
-      })),
+      }), 'snare_2'),
     ];
 
     _tracks.value = initialTracks;
@@ -116,6 +118,7 @@ class PlaybackBloc extends ChangeNotifier implements Playable {
       SoundSelector(displayName, () {
         audioService.playSound(soundKey);
       }),
+      soundKey,
     );
 
     final updatedTracks = List<TrackBloc>.from(_tracks.value)..add(newTrack);
@@ -131,6 +134,84 @@ class PlaybackBloc extends ChangeNotifier implements Playable {
       // Dispose the removed track
       trackToRemove.dispose();
     }
+  }
+
+  /// Save the current pattern to local storage
+  Future<void> savePattern(String name) async {
+    final pattern = SavedPattern(
+      id: _patternStorage.generateId(),
+      name: name,
+      bpm: timeline.bpm.value,
+      metronomeOn: _metronomeStatus.value,
+      totalBeats: _totalBeats.value,
+      tracks: _tracks.value.map((track) {
+        return SavedTrack(
+          soundKey: track.soundKey,
+          displayName: track.sound.name,
+          pattern: track.isEnabled.value,
+        );
+      }).toList(),
+      savedAt: DateTime.now(),
+    );
+
+    await _patternStorage.savePattern(pattern);
+  }
+
+  /// Load a pattern from local storage and apply it to the current state
+  Future<void> loadPattern(String id) async {
+    final pattern = await _patternStorage.loadPattern(id);
+    if (pattern == null) {
+      return;
+    }
+
+    // Stop playback if playing
+    if (timeline.isPlaying.value) {
+      timeline.stop();
+    }
+
+    // Update BPM
+    timeline.setBpm(pattern.bpm);
+
+    // Update metronome status
+    _metronomeStatus.value = pattern.metronomeOn;
+
+    // Update total beats if different
+    if (_totalBeats.value != pattern.totalBeats) {
+      _totalBeats.value = pattern.totalBeats;
+    }
+
+    // Dispose existing tracks
+    for (final track in _tracks.value) {
+      track.dispose();
+    }
+
+    // Create new tracks from saved pattern
+    final newTracks = pattern.tracks.map((savedTrack) {
+      final track = TrackBloc(
+        pattern.totalBeats,
+        SoundSelector(savedTrack.displayName, () {
+          audioService.playSound(savedTrack.soundKey);
+        }),
+        savedTrack.soundKey,
+      );
+
+      // Set the pattern
+      track._isEnabled.value = List<bool>.from(savedTrack.pattern);
+
+      return track;
+    }).toList();
+
+    _tracks.value = newTracks;
+  }
+
+  /// Get list of all saved patterns
+  Future<List<PatternMetadata>> getSavedPatterns() async {
+    return await _patternStorage.getPatternMetadataList();
+  }
+
+  /// Delete a saved pattern
+  Future<void> deletePattern(String id) async {
+    await _patternStorage.deletePattern(id);
   }
 
   int get measures => (_totalBeats.value / 16).ceil();
@@ -229,8 +310,9 @@ class TrackBloc extends ChangeNotifier implements Playable {
   ValueListenable<List<bool>> get isEnabled => _isEnabled;
 
   final SoundSelector sound;
+  final String soundKey; // Sound key for serialization
 
-  TrackBloc(int initWith, this.sound) : _isEnabled = ValueNotifier<List<bool>>(List.generate(initWith, (a) => false));
+  TrackBloc(int initWith, this.sound, this.soundKey) : _isEnabled = ValueNotifier<List<bool>>(List.generate(initWith, (a) => false));
 
   @override
   void dispose() {
