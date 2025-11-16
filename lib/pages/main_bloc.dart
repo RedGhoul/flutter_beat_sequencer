@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:bird_flutter/bird_flutter.dart';
 import 'package:flutter_beat_sequencer/services/audio_service.dart';
 import 'package:flutter_beat_sequencer/pages/pattern.dart';
 
@@ -9,16 +8,15 @@ abstract class Playable {
   void playAtBeat(TimelineBloc bloc, int beat);
 }
 
-// ignore_for_file: close_sinks
-class PlaybackBloc extends HookBloc implements Playable {
-  final Signal<bool> _metronomeStatus = HookBloc.disposeSink(Signal(false));
-  final Signal<int> _totalBeats = HookBloc.disposeSink(Signal(32));
-  final Signal<List<TrackBloc>> _tracks = HookBloc.disposeSink(Signal([]));
+class PlaybackBloc extends ChangeNotifier implements Playable {
+  final ValueNotifier<bool> _metronomeStatus = ValueNotifier<bool>(false);
+  final ValueNotifier<int> _totalBeats = ValueNotifier<int>(32);
+  final ValueNotifier<List<TrackBloc>> _tracks = ValueNotifier<List<TrackBloc>>([]);
   final AudioService audioService;
 
-  Wave<List<TrackBloc>> tracks;
-  Wave<bool> metronomeStatus;
-  Wave<int> totalBeats;
+  ValueListenable<List<TrackBloc>> get tracks => _tracks;
+  ValueListenable<bool> get metronomeStatus => _metronomeStatus;
+  ValueListenable<int> get totalBeats => _totalBeats;
   late TimelineBloc timeline;
 
   PlaybackBloc(this.audioService) {
@@ -51,16 +49,22 @@ class PlaybackBloc extends HookBloc implements Playable {
       })),
     ];
 
-    _tracks.add(initialTracks);
-    initialTracks.map((a) => a.dispose).forEach(disposeLater);
-
-    tracks = _tracks.wave;
-    metronomeStatus = _metronomeStatus.wave;
-    totalBeats = _totalBeats.wave;
+    _tracks.value = initialTracks;
 
     // Initialize timeline with dynamic beat count
     timeline = TimelineBloc(playAtBeat, _totalBeats);
-    disposeLater(timeline.dispose);
+  }
+
+  @override
+  void dispose() {
+    _metronomeStatus.dispose();
+    _totalBeats.dispose();
+    for (final track in _tracks.value) {
+      track.dispose();
+    }
+    _tracks.dispose();
+    timeline.dispose();
+    super.dispose();
   }
 
   @override
@@ -81,7 +85,7 @@ class PlaybackBloc extends HookBloc implements Playable {
 
   void addMeasure() {
     final newTotal = _totalBeats.value + 16; // Add 1 measure (16 beats)
-    _totalBeats.add(newTotal);
+    _totalBeats.value = newTotal;
 
     // Extend all tracks
     for (final track in _tracks.value) {
@@ -92,7 +96,7 @@ class PlaybackBloc extends HookBloc implements Playable {
   void removeMeasure() {
     if (_totalBeats.value > 16) { // Minimum 1 measure
       final newTotal = _totalBeats.value - 16;
-      _totalBeats.add(newTotal);
+      _totalBeats.value = newTotal;
 
       // Truncate all tracks
       for (final track in _tracks.value) {
@@ -114,16 +118,15 @@ class PlaybackBloc extends HookBloc implements Playable {
       }),
     );
 
-    disposeLater(newTrack.dispose);
     final updatedTracks = List<TrackBloc>.from(_tracks.value)..add(newTrack);
-    _tracks.add(updatedTracks);
+    _tracks.value = updatedTracks;
   }
 
   void removeTrack(int index) {
     if (_tracks.value.length > 1 && index >= 0 && index < _tracks.value.length) {
       final trackToRemove = _tracks.value[index];
       final updatedTracks = List<TrackBloc>.from(_tracks.value)..removeAt(index);
-      _tracks.add(updatedTracks);
+      _tracks.value = updatedTracks;
 
       // Dispose the removed track
       trackToRemove.dispose();
@@ -133,45 +136,62 @@ class PlaybackBloc extends HookBloc implements Playable {
   int get measures => (_totalBeats.value / 16).ceil();
 }
 
-class TimelineBloc extends HookBloc {
-  final Signal<bool> _isPlaying = HookBloc.disposeSink(Signal(false));
-  final Signal<double> _bpm = HookBloc.disposeSink(Signal(160.0 * 4.0));
-  final Signal<int> _atBeat = HookBloc.disposeSink(Signal(-1));
-  final Signal<int> _totalBeats;
+class TimelineBloc extends ChangeNotifier {
+  final ValueNotifier<bool> _isPlaying = ValueNotifier<bool>(false);
+  final ValueNotifier<double> _bpm = ValueNotifier<double>(160.0 * 4.0);
+  final ValueNotifier<int> _atBeat = ValueNotifier<int>(-1);
+  final ValueNotifier<int> _totalBeats;
 
-  Wave<bool> get isPlaying => _isPlaying.wave;
-  Wave<double> get bpm => _bpm.wave;
-  Wave<int> get atBeat => _atBeat.wave;
+  ValueListenable<bool> get isPlaying => _isPlaying;
+  ValueListenable<double> get bpm => _bpm;
+  ValueListenable<int> get atBeat => _atBeat;
 
   StreamSubscription<DateTime>? _metronome;
   final void Function(TimelineBloc, int) _playAtBeat;
 
   TimelineBloc(void Function(TimelineBloc, int) playAtBeat, this._totalBeats) : _playAtBeat = playAtBeat {
-    final __isPlaying = _isPlaying.wave.distinct().subscribe((play) {
-      if (_metronome != null) {
-        _metronome.cancel();
-        _metronome = null;
-      }
-      if (play) {
-        _increaseAtBeat();
-        playAtBeat(this, _atBeat.value);
-        final metronome = Metronome.periodic(
-          Duration(microseconds: (double bpm) {
-            final beatsPerMicrosecond = bpm / Duration.microsecondsPerMinute;
-            return 1 ~/ beatsPerMicrosecond;
-          }(_bpm.value)),
-        );
-        _metronome = metronome.listen((data) {
-          _increaseAtBeat();
-          playAtBeat(this, _atBeat.value);
-        });
-      }
+    _isPlaying.addListener(_onIsPlayingChanged);
+    _bpm.addListener(_onBpmChanged);
+  }
+
+  void _onIsPlayingChanged() {
+    _metronome?.cancel();
+    _metronome = null;
+    
+    if (_isPlaying.value) {
+      _startMetronome();
+    }
+  }
+
+  void _onBpmChanged() {
+    if (_isPlaying.value) {
+      _metronome?.cancel();
+      _metronome = null;
+      _startMetronome();
+    }
+  }
+
+  void _startMetronome() {
+    _increaseAtBeat();
+    _playAtBeat(this, _atBeat.value);
+    final period = Duration(microseconds: (double bpm) {
+      final beatsPerMicrosecond = bpm / Duration.microsecondsPerMinute;
+      return 1 ~/ beatsPerMicrosecond;
+    }(_bpm.value));
+    _metronome = Stream.periodic(period, (count) => DateTime.now()).listen((data) {
+      _increaseAtBeat();
+      _playAtBeat(this, _atBeat.value);
     });
   }
 
   @override
   void dispose() {
+    _isPlaying.removeListener(_onIsPlayingChanged);
+    _bpm.removeListener(_onBpmChanged);
     _metronome?.cancel();
+    _isPlaying.dispose();
+    _bpm.dispose();
+    _atBeat.dispose();
     super.dispose();
   }
 
@@ -193,9 +213,9 @@ class TimelineBloc extends HookBloc {
   }
 
   void _increaseAtBeat() {
-    _atBeat.add(atBeat.value + 1);
+    _atBeat.value = _atBeat.value + 1;
     if (_atBeat.value >= _totalBeats.value) {
-      _atBeat.add(0);
+      _atBeat.value = 0;
     }
   }
 

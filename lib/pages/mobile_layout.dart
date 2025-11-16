@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:bird_flutter/bird_flutter.dart';
 import 'main_bloc.dart';
 import '../widgets/mobile_track_row.dart';
 import '../models/sound_library.dart';
@@ -27,11 +26,12 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
 
   @override
   Widget build(BuildContext context) {
-    return $$ >> (context) {
-      final totalBeats = widget.bloc.totalBeats.value;
-      final totalPages = (totalBeats / _beatsPerPage).ceil();
+    return ValueListenableBuilder<int>(
+      valueListenable: widget.bloc.totalBeats,
+      builder: (context, totalBeats, _) {
+        final totalPages = (totalBeats / _beatsPerPage).ceil();
 
-      return Scaffold(
+        return Scaffold(
       backgroundColor: Colors.grey[900],
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddTrackDialog(context),
@@ -95,8 +95,9 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
           ),
         ],
       ),
-      );
-    };
+        );
+      },
+    );
   }
 
   Widget _buildControlPanel() {
@@ -252,10 +253,11 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
             SizedBox(height: 20),
 
             // Measures control
-            $$ >> (context) {
-              final measures = widget.bloc.measures;
+            Builder(
+              builder: (context) {
+                final measures = widget.bloc.measures;
 
-              return Container(
+                return Container(
                 padding: EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: Colors.grey[800],
@@ -317,14 +319,16 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
                   ],
                 ),
               );
-            },
+              },
+            ),
 
             SizedBox(height: 20),
 
             // Visual metronome
             Center(
-              child: $$ >> (context) {
-                final currentBeat = widget.bloc.timeline.atBeat.value;
+              child: ValueListenableBuilder<int>(
+                valueListenable: widget.bloc.timeline.atBeat,
+                builder: (context, currentBeat, _) {
                 final isDownbeat = currentBeat % 4 == 0;
                 final isBar = currentBeat % 16 == 0;
 
@@ -359,7 +363,8 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
                     ),
                   ),
                 );
-              },
+                },
+              ),
             ),
           ],
         ),
@@ -397,11 +402,12 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
   }
 
   Widget _buildBeatIndicator() {
-    return $$ >> (context) {
-      final currentBeat = widget.bloc.timeline.atBeat.value;
-      final startBeat = _currentPage * _beatsPerPage;
+    return ValueListenableBuilder<int>(
+      valueListenable: widget.bloc.timeline.atBeat,
+      builder: (context, currentBeat, _) {
+        final startBeat = _currentPage * _beatsPerPage;
 
-      return Container(
+        return Container(
         height: 20,
         child: Row(
           children: List.generate(_beatsPerPage, (index) {
@@ -439,61 +445,69 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
           }),
         ),
       );
-    };
+      },
+    );
   }
 
   Widget _buildTrackGrid(int pageIndex) {
-    return $$ >> (context) {
-      final totalBeats = widget.bloc.totalBeats.value;
-      final startBeat = pageIndex * _beatsPerPage;
-      final endBeat = (startBeat + _beatsPerPage).clamp(0, totalBeats);
+    return ValueListenableBuilder<int>(
+      valueListenable: widget.bloc.totalBeats,
+      builder: (context, totalBeats, _) {
+        final startBeat = pageIndex * _beatsPerPage;
+        final endBeat = (startBeat + _beatsPerPage).clamp(0, totalBeats);
 
-      return _buildTrackGridContent(startBeat, endBeat);
-    };
+        return _buildTrackGridContent(startBeat, endBeat);
+      },
+    );
   }
 
   Widget _buildTrackGridContent(int startBeat, int endBeat) {
-    return $$ >> (context) {
-      final currentBeat = widget.bloc.timeline.atBeat.value;
-      final tracksList = widget.bloc.tracks.value;
+    return ValueListenableBuilder<int>(
+      valueListenable: widget.bloc.timeline.atBeat,
+      builder: (context, currentBeat, _) {
+        return ValueListenableBuilder<List<TrackBloc>>(
+          valueListenable: widget.bloc.tracks,
+          builder: (context, tracksList, _) {
+            return ListView.separated(
+              padding: EdgeInsets.all(8),
+              itemCount: tracksList.length,
+              separatorBuilder: (context, index) => SizedBox(height: 4),
+              itemBuilder: (context, trackIndex) {
+                final track = tracksList[trackIndex];
 
-      return ListView.separated(
-        padding: EdgeInsets.all(8),
-        itemCount: tracksList.length,
-        separatorBuilder: (context, index) => SizedBox(height: 4),
-        itemBuilder: (context, trackIndex) {
-          final track = tracksList[trackIndex];
-
-          return Card(
-            color: Colors.grey[850],
-            elevation: 1,
-            margin: EdgeInsets.zero,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              child: MobileTrackRow(
-                track: track,
-                currentBeat: currentBeat,
-                startBeat: startBeat,
-                endBeat: endBeat,
-                onDelete: tracksList.length > 1
-                    ? () => widget.bloc.removeTrack(trackIndex)
-                    : null,
-              ),
-            ),
-          );
-        },
-      );
-    };
+                return Card(
+                  color: Colors.grey[850],
+                  elevation: 1,
+                  margin: EdgeInsets.zero,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    child: MobileTrackRow(
+                      track: track,
+                      currentBeat: currentBeat,
+                      startBeat: startBeat,
+                      endBeat: endBeat,
+                      onDelete: tracksList.length > 1
+                          ? () => widget.bloc.removeTrack(trackIndex)
+                          : null,
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
+    );
   }
 
   void _showAddTrackDialog(BuildContext context) {
     HapticFeedback.mediumImpact();
     final soundsByCategory = SoundLibrary.getSoundsByCategory();
 
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.grey[850],
       isScrollControlled: true,
