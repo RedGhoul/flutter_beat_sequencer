@@ -38,11 +38,48 @@ class AudioService {
   }
 
   Future<void> playSound(String soundName) async {
+    // Load sound if not already loaded
+    if (!_players.containsKey(soundName) && _soundPaths.containsKey(soundName)) {
+      await _loadSound(soundName, _soundPaths[soundName]!);
+    }
+
     final player = _players[soundName];
     if (player != null) {
       await player.seek(Duration.zero); // Reset to start
       await player.play();
     }
+  }
+
+  Future<void> _loadSound(String key, String path) async {
+    final player = AudioPlayer();
+    try {
+      await player.setAsset(path);
+      await player.setVolume(1.0);
+      await player.load();
+      _players[key] = player;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Warning: Could not load $key: $e');
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> loadCustomSound(String key, String assetPath) async {
+    _soundPaths[key] = assetPath;
+    await _loadSound(key, assetPath);
+  }
+
+  void unloadSound(String soundName) {
+    final player = _players.remove(soundName);
+    if (player != null) {
+      player.dispose();
+    }
+    _soundPaths.remove(soundName);
+  }
+
+  bool isSoundLoaded(String soundName) {
+    return _players.containsKey(soundName);
   }
 
   Future<void> playSynth(String note, String duration) async {

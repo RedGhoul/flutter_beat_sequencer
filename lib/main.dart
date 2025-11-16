@@ -8,10 +8,10 @@ import 'pages/main_bloc.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Lock to portrait orientation
+  // Lock to landscape orientation
   await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
+    DeviceOrientation.landscapeLeft,
+    DeviceOrientation.landscapeRight,
   ]);
 
   runApp(LoadingApp());
@@ -56,7 +56,7 @@ class _LoadingAppState extends State<LoadingApp> {
         debugShowCheckedModeBanner: false,
         theme: ThemeData.dark(),
         home: Scaffold(
-          backgroundColor: Colors.brown[900],
+          backgroundColor: Colors.grey[900],
           body: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -76,7 +76,7 @@ class _LoadingAppState extends State<LoadingApp> {
         debugShowCheckedModeBanner: false,
         theme: ThemeData.dark(),
         home: Scaffold(
-          backgroundColor: Colors.brown[900],
+          backgroundColor: Colors.grey[900],
           body: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
