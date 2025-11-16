@@ -15,18 +15,15 @@ class MainPage extends StatefulWidget {
 
 class _MainPageState extends State<MainPage> {
   late PlaybackBloc _bloc;
-  late TimelineBloc _timelineBloc;
 
   @override
   void initState() {
     super.initState();
     _bloc = PlaybackBloc(widget.audioService);
-    _timelineBloc = TimelineBloc(_bloc.playAtBeat);
   }
 
   @override
   void dispose() {
-    _timelineBloc.dispose();
     _bloc.dispose();
     super.dispose();
   }
@@ -52,10 +49,10 @@ class _MainPageState extends State<MainPage> {
               )),
               SizedBox(height: 12.0),
               ValueListenableBuilder<double>(
-                valueListenable: _timelineBloc.bpm,
+                valueListenable: _bloc.timeline.bpm,
                 builder: (context, bpmValue, _) {
                   return ValueListenableBuilder<bool>(
-                    valueListenable: _timelineBloc.isPlaying,
+                    valueListenable: _bloc.timeline.isPlaying,
                     builder: (context, playing, _) {
                       return ValueListenableBuilder<bool>(
                         valueListenable: _bloc.metronomeStatus,
@@ -69,14 +66,14 @@ class _MainPageState extends State<MainPage> {
                               Text("BPM: $bpm", style: TextStyle(color: Colors.white)),
                               SizedBox(width: 8.0),
                               TextButton(
-                                onPressed: _timelineBloc.togglePlayback,
+                                onPressed: _bloc.timeline.togglePlayback,
                                 child: Icon(
                                   playing ? Icons.pause : Icons.play_arrow,
                                   color: Colors.white,
                                 ),
                               ),
                               TextButton(
-                                onPressed: _timelineBloc.stop,
+                                onPressed: _bloc.timeline.stop,
                                 child: Icon(Icons.stop, color: Colors.white),
                               ),
                               TextButton(
@@ -94,17 +91,22 @@ class _MainPageState extends State<MainPage> {
                   );
                 },
               ),
-              _beatIndicator(_timelineBloc),
+              _beatIndicator(_bloc.timeline),
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 18.0, vertical: 18.0),
                 decoration: BoxDecoration(
                   color: Colors.brown[900],
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: _bloc.tracks.map((track) => _track(track)).toList(),
+                child: ValueListenableBuilder<List<TrackBloc>>(
+                  valueListenable: _bloc.tracks,
+                  builder: (context, tracks, _) {
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: tracks.map((track) => _track(track)).toList(),
+                    );
+                  },
                 ),
               ),
             ],
