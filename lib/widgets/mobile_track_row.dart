@@ -30,8 +30,8 @@ class MobileTrackRow extends StatelessWidget {
         if (startBeat == 0) ...[
           SizedBox(
             width: 50,
-            child: GestureDetector(
-              onTap: () {
+            child: AnimatedButton(
+              onPressed: () {
                 HapticFeedback.lightImpact();
                 track.sound.play();
               },
@@ -175,7 +175,7 @@ class MobileTrackRow extends StatelessWidget {
   }
 }
 
-class TrackStep extends StatelessWidget {
+class TrackStep extends StatefulWidget {
   final double size;
   final bool enabled;
   final bool active;
@@ -190,34 +190,122 @@ class TrackStep extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  State<TrackStep> createState() => _TrackStepState();
+}
+
+class _TrackStepState extends State<TrackStep> with SingleTickerProviderStateMixin {
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
+  bool _isPressed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.15).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
+      onTapDown: (_) => setState(() => _isPressed = true),
+      onTapUp: (_) {
+        setState(() => _isPressed = false);
         HapticFeedback.selectionClick();
-        onPressed();
+        widget.onPressed();
       },
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: enabled
-              ? Colors.cyan
-              : (active ? Colors.blue.withOpacity(0.3) : Colors.grey[800]),
-          borderRadius: BorderRadius.circular(size / 2),
-          border: Border.all(
-            color: active ? Colors.white : Colors.transparent,
-            width: active ? 2 : 0,
-          ),
-          boxShadow: enabled
-              ? [
-                  BoxShadow(
-                    color: Colors.cyan.withOpacity(0.5),
-                    blurRadius: 6,
-                    spreadRadius: 1,
-                  )
-                ]
-              : null,
+      onTapCancel: () => setState(() => _isPressed = false),
+      child: AnimatedScale(
+        scale: _isPressed ? 0.85 : 1.0,
+        duration: Duration(milliseconds: 100),
+        curve: Curves.easeOut,
+        child: AnimatedBuilder(
+          animation: _pulseAnimation,
+          builder: (context, child) {
+            return AnimatedContainer(
+              duration: Duration(milliseconds: 200),
+              curve: Curves.easeOut,
+              width: widget.size,
+              height: widget.size,
+              decoration: BoxDecoration(
+                color: widget.enabled
+                    ? Colors.cyan
+                    : (widget.active ? Colors.blue.withOpacity(0.3) : Colors.grey[800]),
+                borderRadius: BorderRadius.circular(widget.size / 2),
+                border: Border.all(
+                  color: widget.active ? Colors.white : Colors.transparent,
+                  width: widget.active ? 2 : 0,
+                ),
+                boxShadow: widget.enabled
+                    ? [
+                        BoxShadow(
+                          color: Colors.cyan.withOpacity(0.5 * _pulseAnimation.value),
+                          blurRadius: 6 * _pulseAnimation.value,
+                          spreadRadius: 1 * _pulseAnimation.value,
+                        )
+                      ]
+                    : (widget.active
+                        ? [
+                            BoxShadow(
+                              color: Colors.white.withOpacity(0.3),
+                              blurRadius: 4,
+                              spreadRadius: 1,
+                            )
+                          ]
+                        : null),
+              ),
+            );
+          },
         ),
+      ),
+    );
+  }
+}
+
+/// Animated button widget for better UX with scale animation on press
+class AnimatedButton extends StatefulWidget {
+  final VoidCallback onPressed;
+  final Widget child;
+
+  const AnimatedButton({
+    Key? key,
+    required this.onPressed,
+    required this.child,
+  }) : super(key: key);
+
+  @override
+  State<AnimatedButton> createState() => _AnimatedButtonState();
+}
+
+class _AnimatedButtonState extends State<AnimatedButton> {
+  bool _isPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _isPressed = true),
+      onTapUp: (_) {
+        setState(() => _isPressed = false);
+        widget.onPressed();
+      },
+      onTapCancel: () => setState(() => _isPressed = false),
+      child: AnimatedScale(
+        scale: _isPressed ? 0.95 : 1.0,
+        duration: Duration(milliseconds: 100),
+        curve: Curves.easeOut,
+        child: widget.child,
       ),
     );
   }
