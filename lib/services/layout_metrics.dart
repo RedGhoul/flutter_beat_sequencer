@@ -92,7 +92,12 @@ class LayoutMetrics {
 
   int get minBeatsPerPage => 8;
 
-  int get maxBeatsPerPage => isCompactWidth ? 12 : 16;
+  int get maxBeatsPerPage {
+    if (isLargeWidth) {
+      return 32;
+    }
+    return isCompactWidth ? 12 : 16;
+  }
 
   int calculateBeatsPerPage({required double availableWidth}) {
     const double horizontalPadding = 16;

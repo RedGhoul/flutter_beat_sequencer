@@ -100,17 +100,6 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
 
             return Scaffold(
               backgroundColor: Colors.grey[900],
-              floatingActionButton: Semantics(
-                label: 'Add new track',
-                button: true,
-                child: FloatingActionButton(
-                  onPressed: () => _showAddTrackDialog(context),
-                  backgroundColor: Colors.cyan,
-                  foregroundColor: Colors.black,
-                  child: const Icon(Icons.add),
-                  tooltip: 'Add Track',
-                ),
-              ),
               body: SafeArea(
                 child: metrics.isCompactWidth
                     ? SingleChildScrollView(
@@ -221,6 +210,12 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
                         color: metronomeOn ? Colors.cyan : Colors.white,
                       ),
                       tooltip: 'Metronome',
+                    ),
+                    IconButton(
+                      onPressed: () => _showAddTrackDialog(context),
+                      icon: const Icon(Icons.add_circle_outline,
+                          color: Colors.cyan),
+                      tooltip: 'Add Track',
                     ),
                   ],
                 );
@@ -672,57 +667,87 @@ class _MobileSequencerLayoutState extends State<MobileSequencerLayout> {
       builder: (context, currentBeat, _) {
         final metrics = LayoutMetrics.fromContext(context);
         final startBeat = _currentPage * _beatsPerPage;
+        final spacing = metrics.rowSpacing;
+        const double gridInset = 4;
 
         return SizedBox(
           height: 20,
-          child: Row(
-            children: [
-              SizedBox(width: metrics.beatIndicatorLeadingInset),
-              Expanded(
-                child: Row(
-                  children: List.generate(_beatsPerPage, (index) {
-                    final beatIndex = startBeat + index;
-                    final isActive = currentBeat == beatIndex;
-                    final isFourBeat = beatIndex % 4 == 0;
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: gridInset),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final leadingInset =
+                    metrics.trackLabelWidth + metrics.labelGap + spacing;
+                final trailingInset = metrics.beatIndicatorTrailingInset;
+                final availableWidth =
+                    (constraints.maxWidth - leadingInset - trailingInset)
+                        .clamp(0.0, constraints.maxWidth);
+                final totalSpacing = spacing * (_beatsPerPage - 1);
+                final rawBeatSize =
+                    (availableWidth - totalSpacing) / _beatsPerPage;
+                final beatSize =
+                    rawBeatSize.clamp(metrics.stepMinSize, metrics.stepMaxSize);
 
-                    return Expanded(
-                      child: GestureDetector(
-                        onTap: () => widget.bloc.timeline.setBeat(beatIndex),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 150),
-                          curve: Curves.easeOut,
-                          margin: const EdgeInsets.symmetric(horizontal: 1),
-                          decoration: BoxDecoration(
-                            color: isActive
-                                ? Colors.cyan
-                                : (isFourBeat
-                                    ? Colors.grey[700]
-                                    : Colors.grey[800]),
-                            borderRadius: BorderRadius.circular(3),
-                            border: isFourBeat
-                                ? Border.all(color: Colors.grey[600]!, width: 1)
-                                : null,
-                          ),
-                          child: Center(
-                            child: Text(
-                              '${beatIndex % 16 + 1}',
-                              style: const TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                              ).copyWith(
-                                color:
-                                    isActive ? Colors.black : Colors.grey[500],
+                return Row(
+                  children: [
+                    SizedBox(width: leadingInset),
+                    SizedBox(
+                      width: availableWidth,
+                      child: Row(
+                        children:
+                            List.generate(_beatsPerPage * 2 - 1, (index) {
+                          if (index.isOdd) {
+                            return SizedBox(width: spacing);
+                          }
+                          final beatIndex = startBeat + (index ~/ 2);
+                          final isActive = currentBeat == beatIndex;
+                          final isFourBeat = beatIndex % 4 == 0;
+
+                          return SizedBox(
+                            width: beatSize,
+                            height: 16,
+                            child: GestureDetector(
+                              onTap: () =>
+                                  widget.bloc.timeline.setBeat(beatIndex),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 150),
+                                curve: Curves.easeOut,
+                                decoration: BoxDecoration(
+                                  color: isActive
+                                      ? Colors.cyan
+                                      : (isFourBeat
+                                          ? Colors.grey[700]
+                                          : Colors.grey[800]),
+                                  borderRadius: BorderRadius.circular(3),
+                                  border: isFourBeat
+                                      ? Border.all(
+                                          color: Colors.grey[600]!, width: 1)
+                                      : null,
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '${beatIndex + 1}',
+                                    style: const TextStyle(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                    ).copyWith(
+                                      color: isActive
+                                          ? Colors.black
+                                          : Colors.grey[500],
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                        ),
+                          );
+                        }),
                       ),
-                    );
-                  }),
-                ),
-              ),
-              SizedBox(width: metrics.beatIndicatorTrailingInset),
-            ],
+                    ),
+                    SizedBox(width: trailingInset),
+                  ],
+                );
+              },
+            ),
           ),
         );
       },
