@@ -15,8 +15,8 @@ Iterable<Widget> modulovalueTitle(String title, String repo) {
     ),
     const SizedBox(height: 6.0),
     GestureDetector(
-      onTap: () =>
-          js.context.callMethod("open", <dynamic>["https://twitter.com/modulovalue"]),
+      onTap: () => js.context
+          .callMethod("open", <dynamic>["https://twitter.com/modulovalue"]),
       child: Opacity(
         opacity: 0.7,
         child: Text(
@@ -32,8 +32,8 @@ Iterable<Widget> modulovalueTitle(String title, String repo) {
     ),
     const SizedBox(height: 4.0),
     GestureDetector(
-      onTap: () => js.context
-          .callMethod("open", <dynamic>["https://github.com/modulovalue/$repo"]),
+      onTap: () => js.context.callMethod(
+          "open", <dynamic>["https://github.com/modulovalue/$repo"]),
       child: Opacity(
         opacity: 0.7,
         child: Text(

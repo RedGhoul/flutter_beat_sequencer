@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../pages/main_bloc.dart';
 import '../pages/pattern.dart';
+import '../services/layout_metrics.dart';
 
 class MobileTrackRow extends StatelessWidget {
   final TrackBloc track;
@@ -9,6 +10,7 @@ class MobileTrackRow extends StatelessWidget {
   final int startBeat;
   final int endBeat;
   final VoidCallback? onDelete;
+  final VoidCallback? onOpenEditor;
 
   const MobileTrackRow({
     Key? key,
@@ -17,114 +19,189 @@ class MobileTrackRow extends StatelessWidget {
     required this.startBeat,
     required this.endBeat,
     this.onDelete,
+    this.onOpenEditor,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    const buttonSize = 32.0; // Smaller for landscape
-    const spacing = 2.0;
+    final metrics = LayoutMetrics.fromContext(context);
+    final buttonSize = metrics.stepMaxSize;
+    final spacing = metrics.rowSpacing;
+    final showInlineActions = metrics.showInlineActions;
+    final previewSound = () {
+      HapticFeedback.lightImpact();
+      track.sound.play();
+    };
 
-    return Row(
-      children: [
-        // Track label (only show on first segment)
-        if (startBeat == 0) ...[
-          SizedBox(
-            width: 50,
-            child: AnimatedButton(
-              onPressed: () {
-                HapticFeedback.lightImpact();
-                track.sound.play();
-              },
-              child: Container(
-                padding: EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.grey[800],
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Center(
-                  child: Text(
-                    track.sound.name,
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 2,
-                    textAlign: TextAlign.center,
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onLongPress:
+          showInlineActions ? null : () => _showRowActions(context, track),
+      child: Row(
+        children: [
+          // Track label (only show on first segment)
+          if (startBeat == 0) ...[
+            SizedBox(
+              width: metrics.trackLabelWidth,
+              child: AnimatedButton(
+                onPressed: metrics.isCompactWidth && onOpenEditor != null
+                    ? onOpenEditor!
+                    : previewSound,
+                onLongPress: metrics.isCompactWidth && onOpenEditor != null
+                    ? previewSound
+                    : null,
+                child: Container(
+                  padding: EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[800],
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Center(
+                    child: Text(
+                      track.sound.name,
+                      style:
+                          TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 2,
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-          SizedBox(width: spacing + 2),
-        ] else ...[
-          SizedBox(width: 52 + spacing),
-        ],
+            SizedBox(width: spacing + metrics.labelGap),
+          ] else ...[
+            SizedBox(width: metrics.trackLabelWidth + metrics.labelGap),
+          ],
 
-        // Beat steps for this segment
-        Expanded(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: List.generate(
-              endBeat - startBeat,
-              (index) {
-                final beatIndex = startBeat + index;
-                return ValueListenableBuilder<List<bool>>(
-                  valueListenable: track.isEnabled,
-                  builder: (context, enabledList, _) {
-                    return TrackStep(
-                      size: buttonSize,
-                      enabled: enabledList[beatIndex],
-                      active: currentBeat == beatIndex,
-                      onPressed: () => track.toggle(beatIndex),
-                    );
-                  },
+          // Beat steps for this segment
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final beatsCount = endBeat - startBeat;
+                final availableWidth = constraints.maxWidth;
+                final totalSpacing = spacing * (beatsCount - 1);
+                final rawBeatSize =
+                    (availableWidth - totalSpacing) / beatsCount;
+                final beatSize =
+                    rawBeatSize.clamp(metrics.stepMinSize, buttonSize);
+
+                return Row(
+                  children: List.generate(
+                    beatsCount * 2 - 1,
+                    (index) {
+                      if (index.isOdd) {
+                        return SizedBox(width: spacing);
+                      }
+                      final beatIndex = startBeat + (index ~/ 2);
+                      return SizedBox(
+                        width: beatSize,
+                        height: beatSize,
+                        child: ValueListenableBuilder<List<bool>>(
+                          valueListenable: track.isEnabled,
+                          builder: (context, enabledList, _) {
+                            return TrackStep(
+                              size: beatSize,
+                              enabled: enabledList[beatIndex],
+                              active: currentBeat == beatIndex,
+                              onPressed: () => track.toggle(beatIndex),
+                            );
+                          },
+                        ),
+                      );
+                    },
+                  ),
                 );
               },
             ),
           ),
+
+          // Pattern button (only show on first segment)
+          if (startBeat == 0 && showInlineActions) ...[
+            SizedBox(width: spacing + metrics.labelGap),
+            SizedBox(
+              width: metrics.patternButtonWidth,
+              height: buttonSize,
+              child: ElevatedButton(
+                onPressed: () => _showPatternMenu(context, track),
+                style: ElevatedButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  backgroundColor: Colors.grey[800],
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+                child: Icon(Icons.more_horiz, size: 20, color: Colors.white),
+              ),
+            ),
+          ],
+
+          // Delete button (only show on first segment if deletable)
+          if (startBeat == 0 && onDelete != null && showInlineActions) ...[
+            SizedBox(width: spacing + metrics.labelGap),
+            SizedBox(
+              width: metrics.deleteButtonWidth,
+              height: buttonSize,
+              child: ElevatedButton(
+                onPressed: () {
+                  HapticFeedback.mediumImpact();
+                  onDelete!();
+                },
+                style: ElevatedButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  backgroundColor: Colors.red[900],
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+                child:
+                    Icon(Icons.delete_outline, size: 18, color: Colors.white),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _showRowActions(BuildContext context, TrackBloc track) {
+    HapticFeedback.mediumImpact();
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.grey[850],
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Wrap(
+            runSpacing: 12,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.graphic_eq, color: Colors.cyan),
+                title: const Text('Change pattern',
+                    style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showPatternMenu(context, track);
+                },
+              ),
+              if (onDelete != null)
+                ListTile(
+                  leading:
+                      const Icon(Icons.delete_outline, color: Colors.redAccent),
+                  title: const Text('Delete track',
+                      style: TextStyle(color: Colors.white)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    onDelete!();
+                  },
+                ),
+            ],
+          ),
         ),
-
-        // Pattern button (only show on first segment)
-        if (startBeat == 0) ...[
-          SizedBox(width: spacing + 2),
-          SizedBox(
-            width: 40,
-            height: buttonSize,
-            child: ElevatedButton(
-              onPressed: () => _showPatternMenu(context, track),
-              style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.zero,
-                backgroundColor: Colors.grey[800],
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
-                ),
-              ),
-              child: Icon(Icons.more_horiz, size: 20, color: Colors.white),
-            ),
-          ),
-        ],
-
-        // Delete button (only show on first segment if deletable)
-        if (startBeat == 0 && onDelete != null) ...[
-          SizedBox(width: spacing + 2),
-          SizedBox(
-            width: 36,
-            height: buttonSize,
-            child: ElevatedButton(
-              onPressed: () {
-                HapticFeedback.mediumImpact();
-                onDelete!();
-              },
-              style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.zero,
-                backgroundColor: Colors.red[900],
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
-                ),
-              ),
-              child: Icon(Icons.delete_outline, size: 18, color: Colors.white),
-            ),
-          ),
-        ],
-      ],
+      ),
     );
   }
 
@@ -160,14 +237,15 @@ class MobileTrackRow extends StatelessWidget {
             ),
             SizedBox(height: 16),
             ...allPatterns().map((pattern) => ListTile(
-              title: Text(pattern.name, style: TextStyle(color: Colors.white)),
-              leading: Icon(Icons.graphic_eq, color: Colors.cyan),
-              onTap: () {
-                HapticFeedback.selectionClick();
-                track.setPattern(pattern);
-                Navigator.pop(context);
-              },
-            )),
+                  title:
+                      Text(pattern.name, style: TextStyle(color: Colors.white)),
+                  leading: Icon(Icons.graphic_eq, color: Colors.cyan),
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    track.setPattern(pattern);
+                    Navigator.pop(context);
+                  },
+                )),
           ],
         ),
       ),
@@ -193,7 +271,8 @@ class TrackStep extends StatefulWidget {
   State<TrackStep> createState() => _TrackStepState();
 }
 
-class _TrackStepState extends State<TrackStep> with SingleTickerProviderStateMixin {
+class _TrackStepState extends State<TrackStep>
+    with SingleTickerProviderStateMixin {
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
   bool _isPressed = false;
@@ -242,7 +321,9 @@ class _TrackStepState extends State<TrackStep> with SingleTickerProviderStateMix
               decoration: BoxDecoration(
                 color: widget.enabled
                     ? Colors.cyan
-                    : (widget.active ? Colors.blue.withOpacity(0.3) : Colors.grey[800]),
+                    : (widget.active
+                        ? Colors.blue.withOpacity(0.3)
+                        : Colors.grey[800]),
                 borderRadius: BorderRadius.circular(widget.size / 2),
                 border: Border.all(
                   color: widget.active ? Colors.white : Colors.transparent,
@@ -251,7 +332,8 @@ class _TrackStepState extends State<TrackStep> with SingleTickerProviderStateMix
                 boxShadow: widget.enabled
                     ? [
                         BoxShadow(
-                          color: Colors.cyan.withOpacity(0.5 * _pulseAnimation.value),
+                          color: Colors.cyan
+                              .withOpacity(0.5 * _pulseAnimation.value),
                           blurRadius: 6 * _pulseAnimation.value,
                           spreadRadius: 1 * _pulseAnimation.value,
                         )
@@ -277,11 +359,13 @@ class _TrackStepState extends State<TrackStep> with SingleTickerProviderStateMix
 /// Animated button widget for better UX with scale animation on press
 class AnimatedButton extends StatefulWidget {
   final VoidCallback onPressed;
+  final VoidCallback? onLongPress;
   final Widget child;
 
   const AnimatedButton({
     Key? key,
     required this.onPressed,
+    this.onLongPress,
     required this.child,
   }) : super(key: key);
 
@@ -300,6 +384,7 @@ class _AnimatedButtonState extends State<AnimatedButton> {
         setState(() => _isPressed = false);
         widget.onPressed();
       },
+      onLongPress: widget.onLongPress,
       onTapCancel: () => setState(() => _isPressed = false),
       child: AnimatedScale(
         scale: _isPressed ? 0.95 : 1.0,

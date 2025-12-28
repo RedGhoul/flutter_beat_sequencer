@@ -1,4 +1,3 @@
-
 class TrackPattern {
   final String name;
   final bool Function(int) builder;
@@ -6,8 +5,7 @@ class TrackPattern {
   const TrackPattern(this.name, this.builder);
 }
 
-List<TrackPattern> allPatterns() =>
-    [
+List<TrackPattern> allPatterns() => [
       TrackPattern("Reset", (i) => false),
       TrackPattern("All", (i) => true),
       TrackPattern("Every 2 beat", (i) => i % 2 == 0),

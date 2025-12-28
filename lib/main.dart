@@ -62,7 +62,8 @@ class _LoadingAppState extends State<LoadingApp> {
               children: [
                 CircularProgressIndicator(color: Colors.amber),
                 SizedBox(height: 16),
-                Text('Loading sounds...', style: TextStyle(color: Colors.white)),
+                Text('Loading sounds...',
+                    style: TextStyle(color: Colors.white)),
               ],
             ),
           ),

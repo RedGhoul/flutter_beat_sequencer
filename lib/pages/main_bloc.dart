@@ -13,7 +13,8 @@ abstract class Playable {
 class PlaybackBloc extends ChangeNotifier implements Playable {
   final ValueNotifier<bool> _metronomeStatus = ValueNotifier<bool>(false);
   final ValueNotifier<int> _totalBeats = ValueNotifier<int>(32);
-  final ValueNotifier<List<TrackBloc>> _tracks = ValueNotifier<List<TrackBloc>>([]);
+  final ValueNotifier<List<TrackBloc>> _tracks =
+      ValueNotifier<List<TrackBloc>>([]);
   final AudioService audioService;
   final PatternStorage _patternStorage = PatternStorage();
   final ExportService _exportService = ExportService();
@@ -21,36 +22,61 @@ class PlaybackBloc extends ChangeNotifier implements Playable {
   ValueListenable<List<TrackBloc>> get tracks => _tracks;
   ValueListenable<bool> get metronomeStatus => _metronomeStatus;
   ValueListenable<int> get totalBeats => _totalBeats;
+  bool get isExportAvailable => _exportService.isExportAvailable;
   late TimelineBloc timeline;
 
   PlaybackBloc(this.audioService) {
     final initialBeats = _totalBeats.value;
 
     final initialTracks = [
-      TrackBloc(initialBeats, SoundSelector("808", () {
-        audioService.playSound('bass');
-      }), 'bass'),
-      TrackBloc(initialBeats, SoundSelector("Clap", () {
-        audioService.playSound('clap');
-      }), 'clap'),
-      TrackBloc(initialBeats, SoundSelector("Hat", () {
-        audioService.playSound('hat');
-      }), 'hat'),
-      TrackBloc(initialBeats, SoundSelector("Open Hat", () {
-        audioService.playSound('open_hat');
-      }), 'open_hat'),
-      TrackBloc(initialBeats, SoundSelector("Kick 1", () {
-        audioService.playSound('kick_1');
-      }), 'kick_1'),
-      TrackBloc(initialBeats, SoundSelector("Kick 2", () {
-        audioService.playSound('kick_2');
-      }), 'kick_2'),
-      TrackBloc(initialBeats, SoundSelector("Snare 1", () {
-        audioService.playSound('snare_1');
-      }), 'snare_1'),
-      TrackBloc(initialBeats, SoundSelector("Snare 2", () {
-        audioService.playSound('snare_2');
-      }), 'snare_2'),
+      TrackBloc(
+          initialBeats,
+          SoundSelector("808", () {
+            audioService.playSound('bass');
+          }),
+          'bass'),
+      TrackBloc(
+          initialBeats,
+          SoundSelector("Clap", () {
+            audioService.playSound('clap');
+          }),
+          'clap'),
+      TrackBloc(
+          initialBeats,
+          SoundSelector("Hat", () {
+            audioService.playSound('hat');
+          }),
+          'hat'),
+      TrackBloc(
+          initialBeats,
+          SoundSelector("Open Hat", () {
+            audioService.playSound('open_hat');
+          }),
+          'open_hat'),
+      TrackBloc(
+          initialBeats,
+          SoundSelector("Kick 1", () {
+            audioService.playSound('kick_1');
+          }),
+          'kick_1'),
+      TrackBloc(
+          initialBeats,
+          SoundSelector("Kick 2", () {
+            audioService.playSound('kick_2');
+          }),
+          'kick_2'),
+      TrackBloc(
+          initialBeats,
+          SoundSelector("Snare 1", () {
+            audioService.playSound('snare_1');
+          }),
+          'snare_1'),
+      TrackBloc(
+          initialBeats,
+          SoundSelector("Snare 2", () {
+            audioService.playSound('snare_2');
+          }),
+          'snare_2'),
     ];
 
     _tracks.value = initialTracks;
@@ -98,7 +124,8 @@ class PlaybackBloc extends ChangeNotifier implements Playable {
   }
 
   void removeMeasure() {
-    if (_totalBeats.value > 16) { // Minimum 1 measure
+    if (_totalBeats.value > 16) {
+      // Minimum 1 measure
       final newTotal = _totalBeats.value - 16;
       _totalBeats.value = newTotal;
 
@@ -128,9 +155,12 @@ class PlaybackBloc extends ChangeNotifier implements Playable {
   }
 
   void removeTrack(int index) {
-    if (_tracks.value.length > 1 && index >= 0 && index < _tracks.value.length) {
+    if (_tracks.value.length > 1 &&
+        index >= 0 &&
+        index < _tracks.value.length) {
       final trackToRemove = _tracks.value[index];
-      final updatedTracks = List<TrackBloc>.from(_tracks.value)..removeAt(index);
+      final updatedTracks = List<TrackBloc>.from(_tracks.value)
+        ..removeAt(index);
       _tracks.value = updatedTracks;
 
       // Dispose the removed track
@@ -257,7 +287,8 @@ class TimelineBloc extends ChangeNotifier {
   StreamSubscription<DateTime>? _metronome;
   final void Function(TimelineBloc, int) _playAtBeat;
 
-  TimelineBloc(void Function(TimelineBloc, int) playAtBeat, this._totalBeats) : _playAtBeat = playAtBeat {
+  TimelineBloc(void Function(TimelineBloc, int) playAtBeat, this._totalBeats)
+      : _playAtBeat = playAtBeat {
     _isPlaying.addListener(_onIsPlayingChanged);
     _bpm.addListener(_onBpmChanged);
   }
@@ -265,7 +296,7 @@ class TimelineBloc extends ChangeNotifier {
   void _onIsPlayingChanged() {
     _metronome?.cancel();
     _metronome = null;
-    
+
     if (_isPlaying.value) {
       _startMetronome();
     }
@@ -282,11 +313,13 @@ class TimelineBloc extends ChangeNotifier {
   void _startMetronome() {
     _increaseAtBeat();
     _playAtBeat(this, _atBeat.value);
-    final period = Duration(microseconds: (double bpm) {
+    final period = Duration(
+        microseconds: (double bpm) {
       final beatsPerMicrosecond = bpm / Duration.microsecondsPerMinute;
       return 1 ~/ beatsPerMicrosecond;
     }(_bpm.value));
-    _metronome = Stream.periodic(period, (count) => DateTime.now()).listen((data) {
+    _metronome =
+        Stream.periodic(period, (count) => DateTime.now()).listen((data) {
       _increaseAtBeat();
       _playAtBeat(this, _atBeat.value);
     });
@@ -339,7 +372,9 @@ class TrackBloc extends ChangeNotifier implements Playable {
   final SoundSelector sound;
   final String soundKey; // Sound key for serialization
 
-  TrackBloc(int initWith, this.sound, this.soundKey) : _isEnabled = ValueNotifier<List<bool>>(List.generate(initWith, (a) => false));
+  TrackBloc(int initWith, this.sound, this.soundKey)
+      : _isEnabled =
+            ValueNotifier<List<bool>>(List.generate(initWith, (a) => false));
 
   @override
   void dispose() {
@@ -370,11 +405,8 @@ class TrackBloc extends ChangeNotifier implements Playable {
   }
 
   void setPattern(TrackPattern pattern) {
-    _isEnabled.value = _isEnabled.value
-        .asMap()
-        .keys
-        .map(pattern.builder)
-        .toList();
+    _isEnabled.value =
+        _isEnabled.value.asMap().keys.map(pattern.builder).toList();
   }
 
   void extendPattern(int newLength) {

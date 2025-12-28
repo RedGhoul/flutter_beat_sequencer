@@ -39,7 +39,8 @@ class AudioService {
 
   Future<void> playSound(String soundName) async {
     // Load sound if not already loaded
-    if (!_players.containsKey(soundName) && _soundPaths.containsKey(soundName)) {
+    if (!_players.containsKey(soundName) &&
+        _soundPaths.containsKey(soundName)) {
       await _loadSound(soundName, _soundPaths[soundName]!);
     }
 

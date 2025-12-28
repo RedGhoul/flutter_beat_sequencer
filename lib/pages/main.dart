@@ -44,9 +44,9 @@ class _MainPageState extends State<MainPage> {
                 "Flutter Beat Sequencer",
                 "flutter_beat_sequencer",
               ).map((widget) => DefaultTextStyle(
-                style: TextStyle(color: Colors.white),
-                child: widget,
-              )),
+                    style: TextStyle(color: Colors.white),
+                    child: widget,
+                  )),
               SizedBox(height: 12.0),
               ValueListenableBuilder<double>(
                 valueListenable: _bloc.timeline.bpm,
@@ -63,7 +63,8 @@ class _MainPageState extends State<MainPage> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              Text("BPM: $bpm", style: TextStyle(color: Colors.white)),
+                              Text("BPM: $bpm",
+                                  style: TextStyle(color: Colors.white)),
                               SizedBox(width: 8.0),
                               TextButton(
                                 onPressed: _bloc.timeline.togglePlayback,
@@ -79,7 +80,9 @@ class _MainPageState extends State<MainPage> {
                               TextButton(
                                 onPressed: _bloc.toggleMetronome,
                                 child: Text(
-                                  metronomeStatus ? "Metronome On" : "Metronome Off",
+                                  metronomeStatus
+                                      ? "Metronome On"
+                                      : "Metronome Off",
                                   style: TextStyle(color: Colors.white),
                                 ),
                               ),
@@ -138,8 +141,9 @@ Widget _beatIndicator(TimelineBloc bloc) {
                   child: Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(5.0),
-                      color: i == beat ? Colors.white :
-                             Colors.white.withOpacity(0.05),
+                      color: i == beat
+                          ? Colors.white
+                          : Colors.white.withOpacity(0.05),
                     ),
                     width: 28.0,
                   ),
@@ -206,10 +210,7 @@ Widget _track(TrackBloc bloc) {
               ),
             ),
             SizedBox(width: 8.0),
-            ...enabled
-                .asMap()
-                .entries
-                .map((a) {
+            ...enabled.asMap().entries.map((a) {
               return TrackStep(
                 beat: a.key,
                 selected: a.value,
@@ -244,8 +245,10 @@ class TrackStep extends StatelessWidget {
           width: 32.0,
           height: 32.0,
           decoration: BoxDecoration(
-            color: selected ? Colors.white :
-                   (beat % 4 == 0 ? Colors.white.withOpacity(0.15)
+            color: selected
+                ? Colors.white
+                : (beat % 4 == 0
+                    ? Colors.white.withOpacity(0.15)
                     : Colors.white.withOpacity(0.07)),
             borderRadius: BorderRadius.circular(24.0),
           ),
